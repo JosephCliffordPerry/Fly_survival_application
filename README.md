@@ -1,4 +1,5 @@
 Plan for project 
+
 general organisation = shiny application 
 individual scripts required 
 load script using reticulate and miniconda to generate a functional version of python 
