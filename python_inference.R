@@ -39,20 +39,22 @@ run_inference <- function(model_path, image_dir, stats_file) {
     )[[1]]
     
     obb_list <- results$obb$xyxyxyxy
-    if (length(obb_list) > 0) {
-      for (i in seq_along(obb_list)) {
-        obb <- obb_list[[i]]$cpu()$numpy()
-        # Convert directly to R matrix
+    obb_list_size <- obb_list$size(0L)
+    if (obb_list_size > 0) {
+      for (i in 0:(obb_list_size - 1)) {
+        obb <- obb_list[i]$cpu()$numpy()
+        
+        # Convert to R matrix
         points <- matrix(unlist(py_to_r(obb)), ncol = 2, byrow = TRUE)
         
         coords <- paste(
           apply(points, 1, function(row) paste(row, collapse = "\t")),
           collapse = "\t"
-          
         )
+        
         writeLines(sprintf("%s\t%d\t%s",
                            basename(image_path),
-                           i,
+                           i + 1,  # YOLO shape IDs start at 1
                            coords), f)
       }
     }
