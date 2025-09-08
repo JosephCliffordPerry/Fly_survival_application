@@ -47,13 +47,12 @@ avi_to_tiff_panel <- function() {
         
         log_messages("🚀 Starting AVI → TIFF conversion...")
         
-        future::future({
+        tryCatch({
           Avi_to_tiff(folder_path, log_fun = append_log)
-        }) %...>% {
           append_log("✅ Conversion finished")
-        } %...!% {
-          append_log(paste("❌ Error:", .))
-        }
+        }, error = function(e) {
+          append_log(paste("❌ Error:", e$message))
+        })
       })
     }
   )
