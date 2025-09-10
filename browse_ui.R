@@ -181,8 +181,21 @@ browse_panel <- function() {
         df <- df_prop()
         req(!is.null(df))
         base_name <- tools::file_path_sans_ext(basename(input$stats_file))
-        save_name <- if(grepl("_analysis$", base_name)) paste0(base_name,".txt") else paste0(base_name,"_analysis.txt")
-        write.table(df, file=file.path("statsdir", save_name), sep="\t", row.names=FALSE, quote=FALSE)
+        
+        # Always create a new analysis file with timestamp
+        save_name <- if (grepl("_analysis", base_name)) {
+          paste0(base_name, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
+        } else {
+          paste0(base_name, "_analysis_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
+        }
+        
+        save_path <- file.path("statsdir", save_name)
+        write.table(df, file=save_path, sep="\t", row.names=FALSE, quote=FALSE)
+        
+        # Update dropdown and switch selection
+        stats_files <- list.files("statsdir", pattern="\\.txt$", full.names=FALSE)
+        updateSelectInput(session, "stats_file", choices=stats_files, selected=save_name)
+        
         showNotification(paste("Saved analysis file:", save_name), type="message")
       })
       
