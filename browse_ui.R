@@ -12,6 +12,8 @@ browse_panel <- function() {
           sidebarPanel(
             uiOutput("frame_folder_ui"),
             uiOutput("stats_file_ui"),
+            actionButton("load_analysis", "Load _analysis File", class = "btn-primary"),
+            hr(),
             numericInput("iou_threshold", "Merging IoU Threshold:", 0.3, min = 0, max = 1, step = 0.01),
             numericInput("min_appearances", "Minimum Appearances per ID:", 2, min = 1, step = 1),
             checkboxInput("show_only_propagated", "Show Only Propagated Boxes", FALSE),
@@ -82,15 +84,34 @@ browse_panel <- function() {
       
       #### Storage ####
       df_storage <- reactiveVal(NULL)
+      loaded_analysis_file <- reactiveVal(NULL)
+      
+      #### Load _analysis file ####
+      observeEvent(input$load_analysis, {
+        req(input$stats_file)
+        if(!grepl("_analysis\\.txt$", input$stats_file)) {
+          showNotification("Error: You must select a _analysis file to load.", type="error")
+          return()
+        }
+        df <- read.table(file.path("statsdir", input$stats_file), header=TRUE, sep="\t")
+        df$frame_num <- as.numeric(df$frame_num)
+        df_storage(df)
+        loaded_analysis_file(input$stats_file)
+        showNotification(paste("Loaded analysis file:", input$stats_file), type="message")
+      })
       
       #### Run analysis & propagate ####
       observeEvent(input$run_analysis, {
         req(input$stats_file)
+        if(grepl("_analysis\\.txt$", input$stats_file)) {
+          showNotification("Error: Cannot analyze a _analysis file. Load a raw stats file.", type="error")
+          return()
+        }
         df <- read.table(file.path("statsdir", input$stats_file), header=TRUE, sep="\t")
         df$frame_num <- as.numeric(gsub(".*_(\\d+)\\.tif$", "\\1", basename(df$frame)))
-        df$points <- apply(df[, c("x1","y1","x2","y2","x3","y3","x4","y4")], 1, function(r) matrix(r, ncol=2, byrow=TRUE), simplify=FALSE)
+        df$points <- apply(df[, c("x1","y1","x2","y2","x3","y3","x4","y4")], 1,
+                           function(r) matrix(r, ncol=2, byrow=TRUE), simplify=FALSE)
         df$manual <- FALSE
-        
         threshold <- input$iou_threshold
         df$id <- NA_integer_
         next_id <- 1
@@ -109,12 +130,12 @@ browse_panel <- function() {
             incProgress(1/n, detail=paste("Processing row", i, "of", n))
           }
         })
-        
         # Keep IDs with min appearances
         id_counts <- table(df$id)
         keep_ids <- as.integer(names(id_counts[id_counts >= input$min_appearances]))
         df <- df[df$id %in% keep_ids, ]
         df_storage(df)
+        loaded_analysis_file(NULL)  # Clear loaded analysis since this is a new analysis
       })
       
       #### Remove ID ####
@@ -140,26 +161,18 @@ browse_panel <- function() {
         withProgress(message="Propagating boxes...", value=0, {
           interp_list <- lapply(seq_along(ids), function(idx) {
             id <- ids[idx]; df_id <- df[df$id==id, ]; orig_frames <- df_id$frame_num
-            
-            # Interpolate between appearances
             interp_frames <- seq(min(orig_frames), max(orig_frames))
             interp_df <- data.frame(frame_num=interp_frames, id=id)
             for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
               interp_df[[col]] <- approx(orig_frames, df_id[[col]], xout=interp_frames)$y
             }
-            interp_df$propagated <- TRUE
-            interp_df$prop_type <- "interp"
-            interp_df$manual <- any(df_id$manual)
-            
-            # Original & first frame
+            interp_df$propagated <- TRUE; interp_df$prop_type <- "interp"; interp_df$manual <- any(df_id$manual)
             for(f in orig_frames) {
               interp_df$prop_type[interp_df$frame_num==f] <- "original"
               interp_df$propagated[interp_df$frame_num==f] <- FALSE
             }
             first_f <- min(orig_frames)
             interp_df$prop_type[interp_df$frame_num==first_f] <- "first"
-            
-            # Propagate to end as pupa
             if(max(orig_frames)<max(total_frames)) {
               pupa_frames <- seq(max(orig_frames)+1, max(total_frames))
               pupa_df <- data.frame(frame_num=pupa_frames, id=id)
@@ -180,50 +193,44 @@ browse_panel <- function() {
       observeEvent(input$save_analysis, {
         df <- df_prop()
         req(!is.null(df))
-        base_name <- tools::file_path_sans_ext(basename(input$stats_file))
+        base_name <- basename(input$stats_file)
         
-        # Always create a new analysis file with timestamp
-        save_name <- if (grepl("_analysis", base_name)) {
-          paste0(base_name, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
+        # Overwrite if loaded _analysis, otherwise create new
+        if(!is.null(loaded_analysis_file()) && grepl("_analysis\\.txt$", loaded_analysis_file())) {
+          save_name <- loaded_analysis_file()
+        } else if(grepl("_analysis\\.txt$", base_name)) {
+          save_name <- base_name
         } else {
-          paste0(base_name, "_analysis_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
+          save_name <- paste0(tools::file_path_sans_ext(base_name), "_analysis_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
         }
         
         save_path <- file.path("statsdir", save_name)
-        write.table(df, file=save_path, sep="\t", row.names=FALSE, quote=FALSE)
+        write.table(df, file = save_path, sep="\t", row.names = FALSE, quote = FALSE)
         
-        # Update dropdown and switch selection
         stats_files <- list.files("statsdir", pattern="\\.txt$", full.names=FALSE)
-        updateSelectInput(session, "stats_file", choices=stats_files, selected=save_name)
-        
+        updateSelectInput(session, "stats_file", choices = stats_files, selected=save_name)
         showNotification(paste("Saved analysis file:", save_name), type="message")
       })
       
-      #### Pupariation click ####
+      #### Frame click for pupariation ####
       observeEvent(input$frame_plot_click, {
         req(df_storage(), input$frame_idx)
         df <- df_storage()
         click <- input$frame_plot_click; x_center <- click$x; y_center <- click$y
-        
-        # New ID
         new_id <- if(length(df$id)) max(df$id, na.rm=TRUE)+1 else 1
         frame_file <- frame_paths()[[input$frame_idx]]
         frame_num <- as.numeric(gsub(".*_(\\d+)\\.tif$", "\\1", basename(frame_file)))
         total_frames <- seq(frame_num, length(frame_paths()))
-        
         img <- tiff::readTIFF(frame_file, as.is=TRUE)
         h <- dim(img)[1]; w <- dim(img)[2]; radius <- min(w,h)*0.05
-        
         x_pts <- c(x_center-radius, x_center+radius, x_center+radius, x_center-radius)
         y_pts <- c(y_center-radius, y_center-radius, y_center+radius, y_center+radius)
-        
         first_row <- data.frame(
           frame=basename(frame_file), frame_num=frame_num, id=new_id,
           x1=x_pts[1], y1=y_pts[1], x2=x_pts[2], y2=y_pts[2],
           x3=x_pts[3], y3=y_pts[3], x4=x_pts[4], y4=y_pts[4],
           propagated=TRUE, prop_type="first", manual=TRUE
         )
-        
         if(length(total_frames)>1) {
           pupa_rows <- do.call(rbind, lapply(total_frames[-1], function(f) {
             data.frame(
@@ -235,7 +242,6 @@ browse_panel <- function() {
           }))
           new_rows <- rbind(first_row, pupa_rows)
         } else new_rows <- first_row
-        
         missing_cols <- setdiff(names(df), names(new_rows))
         for(col in missing_cols) new_rows[[col]] <- NA
         new_rows <- new_rows[, names(df)]
@@ -250,16 +256,13 @@ browse_panel <- function() {
         frame_num <- as.numeric(gsub(".*_(\\d+)\\.tif$", "\\1", basename(frame_file)))
         img <- tiff::readTIFF(frame_file, as.is=TRUE)
         height <- dim(img)[1]; width <- dim(img)[2]
-        
         par(xaxs="i", yaxs="i")
         plot(NA, xlim=c(0,width), ylim=c(height,0), xlab="", ylab="", axes=FALSE, asp=1,
              main=sprintf("%s (frame %d)", basename(frame_file), frame_num))
         rasterImage(img, 0, height, width, 0, interpolate=FALSE)
-        
         df <- df_prop()
         boxes <- df[df$frame_num==frame_num, , drop=FALSE]
         if(input$show_only_propagated) boxes <- boxes[boxes$prop_type!="original" & boxes$prop_type!="first", ]
-        
         if(nrow(boxes)>0){
           for(i in seq_len(nrow(boxes))){
             row <- boxes[i,]
