@@ -12,8 +12,8 @@ browse_panel <- function() {
           sidebarPanel(
             uiOutput("frame_folder_ui"),
             uiOutput("stats_file_ui"),
-            actionButton("load_analysis", "Load _analysis File", class = "btn-primary"),
-            hr(),
+            
+            actionButton("load_analysis", "Load Analysis File", class = "btn-success"),
             numericInput("iou_threshold", "Merging IoU Threshold:", 0.3, min = 0, max = 1, step = 0.01),
             numericInput("min_appearances", "Minimum Appearances per ID:", 2, min = 1, step = 1),
             checkboxInput("show_only_propagated", "Show Only Propagated Boxes", FALSE),
@@ -36,11 +36,13 @@ browse_panel <- function() {
       `%||%` <- function(a,b) if(!is.null(a)) a else b
       .nz <- function(x) if(length(x)) x else ""
       
+      # Store loaded _analysis file
+      loaded_analysis_file <- reactiveVal(NULL)
+      
       #### Frame folder UI ####
       output$frame_folder_ui <- renderUI({
         req(dir.exists("avi_frames"))
         subs <- list.dirs("avi_frames", full.names = FALSE, recursive = FALSE)
-        if(length(subs)==0) subs <- ""
         selectInput("frame_folder", "Frame Subfolder:", choices=subs, selected=isolate(input$frame_folder) %||% subs[1])
       })
       
@@ -48,7 +50,6 @@ browse_panel <- function() {
       output$stats_file_ui <- renderUI({
         req(dir.exists("statsdir"))
         stats_files <- list.files("statsdir", pattern="\\.txt$", full.names=FALSE)
-        if(length(stats_files)==0) stats_files <- ""
         selectInput("stats_file", "Stats File:", choices=stats_files, selected=isolate(input$stats_file) %||% stats_files[1])
       })
       
@@ -84,13 +85,12 @@ browse_panel <- function() {
       
       #### Storage ####
       df_storage <- reactiveVal(NULL)
-      loaded_analysis_file <- reactiveVal(NULL)
       
-      #### Load _analysis file ####
+      #### Load Analysis File ####
       observeEvent(input$load_analysis, {
         req(input$stats_file)
         if(!grepl("_analysis\\.txt$", input$stats_file)) {
-          showNotification("Error: You must select a _analysis file to load.", type="error")
+          showNotification("Error: Only _analysis files can be loaded.", type="error")
           return()
         }
         df <- read.table(file.path("statsdir", input$stats_file), header=TRUE, sep="\t")
@@ -100,22 +100,20 @@ browse_panel <- function() {
         showNotification(paste("Loaded analysis file:", input$stats_file), type="message")
       })
       
-      #### Run analysis & propagate ####
+      #### Run Analysis & propagate ####
       observeEvent(input$run_analysis, {
         req(input$stats_file)
         if(grepl("_analysis\\.txt$", input$stats_file)) {
-          showNotification("Error: Cannot analyze a _analysis file. Load a raw stats file.", type="error")
+          showNotification("Error: Cannot run analysis on an _analysis file.", type="error")
           return()
         }
         df <- read.table(file.path("statsdir", input$stats_file), header=TRUE, sep="\t")
         df$frame_num <- as.numeric(gsub(".*_(\\d+)\\.tif$", "\\1", basename(df$frame)))
-        df$points <- apply(df[, c("x1","y1","x2","y2","x3","y3","x4","y4")], 1,
-                           function(r) matrix(r, ncol=2, byrow=TRUE), simplify=FALSE)
+        df$points <- apply(df[, c("x1","y1","x2","y2","x3","y3","x4","y4")], 1, function(r) matrix(r, ncol=2, byrow=TRUE), simplify=FALSE)
         df$manual <- FALSE
-        threshold <- input$iou_threshold
         df$id <- NA_integer_
         next_id <- 1
-        
+        threshold <- input$iou_threshold
         withProgress(message="Running analysis & propagating boxes...", value=0, {
           n <- nrow(df)
           for(i in seq_len(n)) {
@@ -130,12 +128,80 @@ browse_panel <- function() {
             incProgress(1/n, detail=paste("Processing row", i, "of", n))
           }
         })
-        # Keep IDs with min appearances
         id_counts <- table(df$id)
         keep_ids <- as.integer(names(id_counts[id_counts >= input$min_appearances]))
         df <- df[df$id %in% keep_ids, ]
         df_storage(df)
-        loaded_analysis_file(NULL)  # Clear loaded analysis since this is a new analysis
+        loaded_analysis_file(NULL) # Analysis created from raw stats
+        
+        #### Save newly created _analysis file automatically ####
+        base_name <- paste0(tools::file_path_sans_ext(input$stats_file), "_analysis.txt")
+        save_path <- file.path("statsdir", base_name)
+        iter <- 0
+        while(file.exists(save_path)) {
+          iter <- iter + 1
+          save_path <- file.path("statsdir", paste0(tools::file_path_sans_ext(input$stats_file),
+                                                    "_analysis_", iter, ".txt"))
+        }
+        write.table(df, file=save_path, sep="\t", row.names=FALSE, quote=FALSE)
+        showNotification(paste("Analysis completed and saved as:", basename(save_path)), type="message")
+      })
+      
+      #### Propagation reactive ####
+      df_prop <- reactive({
+        df <- df_storage()
+        req(!is.null(df), nrow(df) > 0)
+        total_frames <- seq_len(length(frame_paths()))
+        ids <- unique(df$id)
+        withProgress(message="Propagating boxes...", value=0, {
+          interp_list <- lapply(seq_along(ids), function(idx) {
+            id <- ids[idx]; df_id <- df[df$id==id, ]; orig_frames <- df_id$frame_num
+            interp_frames <- seq(min(orig_frames), max(orig_frames))
+            interp_df <- data.frame(frame_num = interp_frames, id = id)
+            for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
+              interp_df[[col]] <- approx(orig_frames, df_id[[col]], xout = interp_frames)$y
+            }
+            interp_df$propagated <- TRUE
+            interp_df$prop_type <- "interp"
+            interp_df$manual <- any(df_id$manual)
+            for(f in orig_frames) {
+              interp_df$prop_type[interp_df$frame_num == f] <- "original"
+              interp_df$propagated[interp_df$frame_num == f] <- FALSE
+            }
+            first_f <- min(orig_frames)
+            interp_df$prop_type[interp_df$frame_num == first_f] <- "first"
+            if(max(orig_frames) < max(total_frames)) {
+              pupa_frames <- seq(max(orig_frames)+1, max(total_frames))
+              pupa_df <- data.frame(frame_num = pupa_frames, id = id)
+              for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
+                pupa_df[[col]] <- approx(orig_frames, df_id[[col]], xout = pupa_frames, rule=2)$y
+              }
+              pupa_df$propagated <- TRUE; pupa_df$prop_type <- "pupa"; pupa_df$manual <- any(df_id$manual)
+              interp_df <- rbind(interp_df, pupa_df)
+            }
+            incProgress(1/length(ids), detail = paste("Propagating ID", id))
+            interp_df
+          })
+          do.call(rbind, interp_list)
+        })
+      })
+      
+      #### Save analysis ####
+      observeEvent(input$save_analysis, {
+        df <- df_prop()
+        req(!is.null(df))
+        # Always overwrite either loaded_analysis_file() or selected _analysis file
+        if(!is.null(loaded_analysis_file())) {
+          save_name <- loaded_analysis_file()
+        } else if(grepl("_analysis\\.txt$", input$stats_file)) {
+          save_name <- input$stats_file
+        } else {
+          # fallback (should not happen)
+          save_name <- paste0(tools::file_path_sans_ext(input$stats_file), "_analysis.txt")
+        }
+        save_path <- file.path("statsdir", save_name)
+        write.table(df, file=save_path, sep="\t", row.names=FALSE, quote=FALSE)
+        showNotification(paste("Saved analysis file:", save_name), type="message")
       })
       
       #### Remove ID ####
@@ -151,68 +217,7 @@ browse_panel <- function() {
         }
       })
       
-      #### Propagation ####
-      df_prop <- reactive({
-        df <- df_storage()
-        req(!is.null(df), nrow(df)>0)
-        total_frames <- seq_len(length(frame_paths()))
-        ids <- unique(df$id)
-        
-        withProgress(message="Propagating boxes...", value=0, {
-          interp_list <- lapply(seq_along(ids), function(idx) {
-            id <- ids[idx]; df_id <- df[df$id==id, ]; orig_frames <- df_id$frame_num
-            interp_frames <- seq(min(orig_frames), max(orig_frames))
-            interp_df <- data.frame(frame_num=interp_frames, id=id)
-            for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
-              interp_df[[col]] <- approx(orig_frames, df_id[[col]], xout=interp_frames)$y
-            }
-            interp_df$propagated <- TRUE; interp_df$prop_type <- "interp"; interp_df$manual <- any(df_id$manual)
-            for(f in orig_frames) {
-              interp_df$prop_type[interp_df$frame_num==f] <- "original"
-              interp_df$propagated[interp_df$frame_num==f] <- FALSE
-            }
-            first_f <- min(orig_frames)
-            interp_df$prop_type[interp_df$frame_num==first_f] <- "first"
-            if(max(orig_frames)<max(total_frames)) {
-              pupa_frames <- seq(max(orig_frames)+1, max(total_frames))
-              pupa_df <- data.frame(frame_num=pupa_frames, id=id)
-              for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
-                pupa_df[[col]] <- approx(orig_frames, df_id[[col]], xout=pupa_frames, rule=2)$y
-              }
-              pupa_df$propagated <- TRUE; pupa_df$prop_type <- "pupa"; pupa_df$manual <- any(df_id$manual)
-              interp_df <- rbind(interp_df, pupa_df)
-            }
-            incProgress(1/length(ids), detail=paste("Propagating ID", id))
-            interp_df
-          })
-          do.call(rbind, interp_list)
-        })
-      })
-      
-      #### Save analysis ####
-      observeEvent(input$save_analysis, {
-        df <- df_prop()
-        req(!is.null(df))
-        base_name <- basename(input$stats_file)
-        
-        # Overwrite if loaded _analysis, otherwise create new
-        if(!is.null(loaded_analysis_file()) && grepl("_analysis\\.txt$", loaded_analysis_file())) {
-          save_name <- loaded_analysis_file()
-        } else if(grepl("_analysis\\.txt$", base_name)) {
-          save_name <- base_name
-        } else {
-          save_name <- paste0(tools::file_path_sans_ext(base_name), "_analysis_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".txt")
-        }
-        
-        save_path <- file.path("statsdir", save_name)
-        write.table(df, file = save_path, sep="\t", row.names = FALSE, quote = FALSE)
-        
-        stats_files <- list.files("statsdir", pattern="\\.txt$", full.names=FALSE)
-        updateSelectInput(session, "stats_file", choices = stats_files, selected=save_name)
-        showNotification(paste("Saved analysis file:", save_name), type="message")
-      })
-      
-      #### Frame click for pupariation ####
+      #### Pupariation click ####
       observeEvent(input$frame_plot_click, {
         req(df_storage(), input$frame_idx)
         df <- df_storage()
@@ -256,13 +261,16 @@ browse_panel <- function() {
         frame_num <- as.numeric(gsub(".*_(\\d+)\\.tif$", "\\1", basename(frame_file)))
         img <- tiff::readTIFF(frame_file, as.is=TRUE)
         height <- dim(img)[1]; width <- dim(img)[2]
+        
         par(xaxs="i", yaxs="i")
         plot(NA, xlim=c(0,width), ylim=c(height,0), xlab="", ylab="", axes=FALSE, asp=1,
              main=sprintf("%s (frame %d)", basename(frame_file), frame_num))
         rasterImage(img, 0, height, width, 0, interpolate=FALSE)
+        
         df <- df_prop()
         boxes <- df[df$frame_num==frame_num, , drop=FALSE]
         if(input$show_only_propagated) boxes <- boxes[boxes$prop_type!="original" & boxes$prop_type!="first", ]
+        
         if(nrow(boxes)>0){
           for(i in seq_len(nrow(boxes))){
             row <- boxes[i,]

@@ -62,7 +62,7 @@ graph_panel <- function() {
       })
       output$analysis_file_ui3 <- renderUI({
         req(input$frame_folder)
-        stats_files <- list.files("statsdir", pattern = "_analysis\\.txt$", full.names = FALSE)
+        stats_files <- list.files("statsdir", pattern = "_analysis(_\\d+)?\\.txt$", full.names = FALSE)
         selectInput("analysis_file", "Select Analysis File:", choices = stats_files)
       })
       
