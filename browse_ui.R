@@ -12,7 +12,6 @@ browse_panel <- function() {
           sidebarPanel(
             uiOutput("frame_folder_ui"),
             uiOutput("stats_file_ui"),
-            
             actionButton("load_analysis", "Load Analysis File", class = "btn-success"),
             numericInput("iou_threshold", "Merging IoU Threshold:", 0.3, min = 0, max = 1, step = 0.01),
             numericInput("min_appearances", "Minimum Appearances per ID:", 2, min = 1, step = 1),
@@ -89,7 +88,7 @@ browse_panel <- function() {
       #### Load Analysis File ####
       observeEvent(input$load_analysis, {
         req(input$stats_file)
-        if(!grepl("_analysis\\.txt$", input$stats_file)) {
+        if(!grepl("_analysis.*\\.txt$", input$stats_file)) {
           showNotification("Error: Only _analysis files can be loaded.", type="error")
           return()
         }
@@ -103,7 +102,7 @@ browse_panel <- function() {
       #### Run Analysis & propagate ####
       observeEvent(input$run_analysis, {
         req(input$stats_file)
-        if(grepl("_analysis\\.txt$", input$stats_file)) {
+        if(grepl("_analysis.*\\.txt$", input$stats_file)) {
           showNotification("Error: Cannot run analysis on an _analysis file.", type="error")
           return()
         }
@@ -143,7 +142,17 @@ browse_panel <- function() {
           save_path <- file.path("statsdir", paste0(tools::file_path_sans_ext(input$stats_file),
                                                     "_analysis_", iter, ".txt"))
         }
-        write.table(df, file=save_path, sep="\t", row.names=FALSE, quote=FALSE)
+        df_to_save <- df
+        if ("points" %in% names(df_to_save)) {
+          df_to_save <- subset(df, select = -points)
+        }
+        
+        write.table(df_to_save,
+                    file = save_path,
+                    sep = "\t",
+                    row.names = FALSE,
+                    quote = FALSE)
+        
         showNotification(paste("Analysis completed and saved as:", basename(save_path)), type="message")
       })
       
@@ -193,7 +202,7 @@ browse_panel <- function() {
         # Always overwrite either loaded_analysis_file() or selected _analysis file
         if(!is.null(loaded_analysis_file())) {
           save_name <- loaded_analysis_file()
-        } else if(grepl("_analysis\\.txt$", input$stats_file)) {
+        } else if(grepl("_analysis.*\\.txt$", input$stats_file)) {
           save_name <- input$stats_file
         } else {
           # fallback (should not happen)

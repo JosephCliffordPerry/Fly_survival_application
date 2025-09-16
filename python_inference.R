@@ -52,7 +52,7 @@ run_inference_multi <- function(image_dir, stats_file, iou_threshold = 0.5) {
   # --- File writing with safe connection ---
   f <- file(stats_file, open = "w")
   on.exit(close(f), add = TRUE)
-  writeLines("frame\tshape_id\tx1\ty1\tx2\ty2\tx3\ty3\tx4\ty4", con = f)
+  writeLines("frame\tshape_id\tx1\tx2\tx3\tx4\ty1\ty2\ty3\ty4", con = f)
   
   image_paths <- list.files(image_dir, pattern = "\\.tif$", full.names = TRUE)
   n_images <- length(image_paths)
