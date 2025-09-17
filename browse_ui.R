@@ -106,31 +106,76 @@ browse_panel <- function() {
           showNotification("Error: Cannot run analysis on an _analysis file.", type="error")
           return()
         }
-        df <- read.table(file.path("statsdir", input$stats_file), header=TRUE, sep="\t")
+        df <- read.table(file.path("statsdir", input$stats_file),
+                         header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+        
+        # Extract frame number
         df$frame_num <- as.numeric(gsub(".*_(\\d+)\\.tif$", "\\1", basename(df$frame)))
-        df$points <- apply(df[, c("x1","y1","x2","y2","x3","y3","x4","y4")], 1, function(r) matrix(r, ncol=2, byrow=TRUE), simplify=FALSE)
+        
+        # Build polygons
+        df$points <- apply(df[, c("x1","y1","x2","y2","x3","y3","x4","y4")],
+                           1, function(r) matrix(r, ncol = 2, byrow = TRUE), simplify = FALSE)
+        
         df$manual <- FALSE
         df$id <- NA_integer_
         next_id <- 1
         threshold <- input$iou_threshold
-        withProgress(message="Running analysis & propagating boxes...", value=0, {
-          n <- nrow(df)
-          for(i in seq_len(n)) {
-            if(is.na(df$id[i])) {
+        
+        # --- Vectorized AABB bounding boxes ---
+        n <- nrow(df)
+        coords_array <- array(NA, dim = c(2, 4, n))  # 2 coords x 4 points x n
+        
+        for (i in seq_len(n)) {
+          coords_array[1, , i] <- df$points[[i]][,1]  # x coordinates
+          coords_array[2, , i] <- df$points[[i]][,2]  # y coordinates
+        }
+        
+        df$x_min <- apply(coords_array[1,,], 2, min)
+        df$x_max <- apply(coords_array[1,,], 2, max)
+        df$y_min <- apply(coords_array[2,,], 2, min)
+        df$y_max <- apply(coords_array[2,,], 2, max)
+        
+        # --- Forward propagation with AABB prefilter ---
+        withProgress(message = "Running analysis & propagating boxes...", value = 0, {
+          
+          for (i in seq_len(n)) {
+            if (is.na(df$id[i])) {
               df$id[i] <- next_id
               poly_i <- df$points[[i]]
-              for(j in (i+1):n) {
-                if(is.na(df$id[j]) && obb_iou(poly_i, df$points[[j]]) > threshold) df$id[j] <- df$id[i]
+              
+              if (i < n) {
+                # Vectorized AABB check for all remaining polygons
+                remaining <- (i+1):n
+                xi_min <- df$x_min[i]; xi_max <- df$x_max[i]
+                yi_min <- df$y_min[i]; yi_max <- df$y_max[i]
+                
+                x_overlap <- (xi_max >= df$x_min[remaining]) & (xi_min <= df$x_max[remaining])
+                y_overlap <- (yi_max >= df$y_min[remaining]) & (yi_min <= df$y_max[remaining])
+                candidates <- remaining[x_overlap & y_overlap]  # Only boxes that actually overlap
+                
+                # Check IoU only for candidates
+                for (j in candidates) {
+                  if (is.na(df$id[j]) && obb_iou(poly_i, df$points[[j]]) > threshold) {
+                    df$id[j] <- df$id[i]
+                  }
+                }
               }
+              
               next_id <- next_id + 1
             }
-            incProgress(1/n, detail=paste("Processing row", i, "of", n))
+            
+            incProgress(1/n, detail = paste("Processing row", i, "of", n))
           }
         })
+        
+        # Filter by min_appearances
         id_counts <- table(df$id)
         keep_ids <- as.integer(names(id_counts[id_counts >= input$min_appearances]))
         df <- df[df$id %in% keep_ids, ]
+        
+        # Store final dataframe
         df_storage(df)
+        
         loaded_analysis_file(NULL) # Analysis created from raw stats
         
         #### Save newly created _analysis file automatically ####

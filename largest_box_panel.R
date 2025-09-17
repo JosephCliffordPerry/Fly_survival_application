@@ -42,7 +42,7 @@ largest_box_panel <- function(df_storage, current_frame_idx, refresh_browse) {
       
       #### Stats file selection ####
       output$stats_file_ui2 <- renderUI({
-        stats_files <- list.files("statsdir", pattern="_analysis\.txt$", full.names=FALSE)
+        stats_files <- list.files("statsdir", pattern="_analysis*\\.txt$", full.names=FALSE)
         selectInput("stats_file", "Analysis File:", choices=.nz(stats_files))
       })
       
