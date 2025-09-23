@@ -6,13 +6,14 @@ library(ggplot2)
 
 source("avi_ui.R")
 source("inference_ui.R")
+source("Loading_datasets.R")
 source("python_inference.R")
 source("avi_converter.R")
-source("graph_ui.R")   
+source("graph_ui.R")
 source("browse_ui.R")
 source("largest_box_panel.R")
 
-# make Sub directories 
+# ---- Make Sub-directories ----
 folders <- c("statsdir", "avi_frames", "analysisdir")
 for (folder in folders) {
   if (!dir.exists(folder)) {
@@ -23,32 +24,50 @@ for (folder in folders) {
   }
 }
 
-# instantiate panels
-avi_panel <- avi_to_tiff_panel()
-inf_panel <- inference_panel()
-browse_panel <- browse_panel()
-largest_panel <- largest_box_panel()
-graph_panel <- graph_panel()  
-# full UI
 ui <- navbarPage(
   "Fly Survival Tools",
-  avi_panel$ui,
-  inf_panel$ui,
-  browse_panel$ui,
-  largest_panel$ui,
-  graph_panel$ui
+  
+  # Group 1: Data Processing
+  navbarMenu("Data Processing",
+             avi_to_tiff_panel()$ui,
+             inference_panel()$ui,
+             data_load_panel()$ui
+  ),
+  
+  # Group 2: Analysis & Browsing
+  navbarMenu("Analysis & Browsing",
+             browse_panel()$ui,
+             largest_box_panel()$ui,
+             graph_panel()$ui
+  )
 )
-
-# full server
 server <- function(input, output, session) {
-  avi_panel$server(input, output, session)
-  inf_panel$server(input, output, session)
-  browse_panel$server(input, output, session)
-  largest_panel$server(input, output, session)
-  graph_panel$server(input, output, session)
-  }
-
-
+  # Shared reactive values across modules
+  df_analysis <- reactiveVal(NULL)        # holds the analysis dataframe
+  frame_paths <- reactiveVal(NULL)        # holds paths to frames
+  
+  # ---- Module instantiations ----
+  
+  # Data processing panels
+  avi_to_tiff_panel()$server(input, output, session)
+  inference_panel()$server(input, output, session)
+  
+  # Data & Images panel gets df_analysis reactive
+  data_load_panel(df_analysis,frame_paths)$server(input, output, session)
+  
+  # Analysis & Browsing panels
+  browse_panel(df_analysis = df_analysis, frame_paths = frame_paths)$server(input, output, session)
+  largest_box_panel(df_analysis = df_analysis, frame_paths = frame_paths)$server(input, output, session)
+  graph_panel(df_analysis = df_analysis, frame_paths = frame_paths)$server(input, output, session)
+  
+  #update frame_paths when user selects a folder in data_load_panel
+  observe({
+    req(input$frame_folder)
+    folder <- file.path("avi_frames", input$frame_folder)
+    files <- list.files(folder, pattern="\\.tif$", full.names = TRUE)
+    frame_paths(files[order(as.numeric(gsub(".*_(\\d+)\\.tif$", "\\1", files)))])
+  })
+}
 
 shinyApp(ui, server)
 
