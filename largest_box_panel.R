@@ -38,7 +38,7 @@ largest_box_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
         )
       })
       
-      #### Largest OBB per ID ####
+      #### Largest OBB per ID #### finds biggest obbox for each pupa so it can be used to make sure you can see it 
       largest_per_id <- reactive({
         df <- df_analysis()
         req(df$id)

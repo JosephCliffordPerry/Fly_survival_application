@@ -7,7 +7,7 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
         sidebarLayout(
           sidebarPanel(
             numericInput("iou_threshold", "Merging IoU Threshold:", 0.3, min = 0, max = 1, step = 0.01),
-            numericInput("min_appearances", "Minimum Appearances per ID:", 2, min = 1, step = 1),
+            numericInput("min_appearances", "Minimum Appearances per ID:", 2, min = 2, step = 1),
             checkboxInput("show_only_propagated", "Show Only Propagated Boxes", FALSE),
             actionButton("run_analysis", "Load/Analyse input file", class = "btn-success"),
             actionButton("save_analysis", "Save Analysis File", class = "btn-primary"),
@@ -150,7 +150,7 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
             }
             interp_df$propagated <- TRUE
             interp_df$prop_type <- "interp"
-            
+            #section making sure the dataset works whether you add a pupariation or not 
             if(!"manual" %in% names(df_id)) {
               df_id$manual <- FALSE
             } else {

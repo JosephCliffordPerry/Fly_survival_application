@@ -109,12 +109,12 @@ graph_panel <- function(df_analysis, frame_paths) {
         base_name <- gsub("\\..*$", "", base_name)  # extra cleanup
         
         # Start with "_export.xlxs"
-        candidate <- file.path("statsdir", paste0(base_name, "_export.xlxs"))
+        candidate <- file.path("statsdir", paste0(base_name, "_export.xlsx"))
         
         # If exists, increment until unique
         counter <- 1
         while (file.exists(candidate)) {
-          candidate <- file.path("statsdir", paste0(base_name, "_export_", counter, ".xlxs"))
+          candidate <- file.path("statsdir", paste0(base_name, "_export_", counter, ".xlsx"))
           counter <- counter + 1
         }
         
@@ -149,7 +149,7 @@ graph_panel <- function(df_analysis, frame_paths) {
         openxlsx::addWorksheet(wb, "Right")
         openxlsx::writeData(wb, "Left", left_table)
         openxlsx::writeData(wb, "Right", right_table)
-        openxlsx::saveWorkbook(wb, Excel_save_path, overwrite = TRUE)
+        openxlsx::saveWorkbook(wb, Excel_save_path(), overwrite = TRUE)
         
         showNotification("Excel exported.", type = "message")
       })
