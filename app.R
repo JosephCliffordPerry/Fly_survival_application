@@ -3,7 +3,7 @@ library(shinyFiles)
 library(reticulate)
 library(sf)
 library(ggplot2)
-
+library(bslib)   
 source("avi_ui.R")
 source("inference_ui.R")
 source("Loading_datasets.R")
@@ -24,8 +24,16 @@ for (folder in folders) {
   }
 }
 
+# ---- Define Theme ----
+app_theme <- bs_theme(
+  version = 5,
+  bootswatch = "darkly",  
+  primary = "#FF6600",    
+)
+
 ui <- navbarPage(
   "Fly Survival Tools",
+  theme = app_theme,  
   
   # Group 1: Data Processing
   navbarMenu("Data Processing",
@@ -41,12 +49,13 @@ ui <- navbarPage(
              graph_panel()$ui
   )
 )
+
 server <- function(input, output, session) {
   # Shared reactive values across modules
   df_analysis <- reactiveVal(NULL)        # holds the analysis dataframe
   frame_paths <- reactiveVal(NULL)        # holds paths to frames
   
-  # ---- Module instantiations ----
+  # ---- Module loading ----
   
   # Data processing panels
   avi_to_tiff_panel()$server(input, output, session)
