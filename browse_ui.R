@@ -116,7 +116,7 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
               }
               next_id <- next_id + 1
             }
-            incProgress(1/n)
+           # incProgress(1/n)
           }
         })
         
@@ -140,13 +140,27 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
         }
         total_frames <- seq_len(length(frame_paths()))
         ids <- unique(df$id)
+        
+        req(length(ids) > 0)
         withProgress(message="Propagating boxes...", value=0, {
           interp_list <- lapply(seq_along(ids), function(idx) {
-            id <- ids[idx]; df_id <- df[df$id==id, ]; orig_frames <- df_id$frame_num
+            
+            id <- ids[idx]
+            df_id <- df[df$id==id, ] 
+            orig_frames <- df_id$frame_num
+            
             interp_frames <- seq(min(orig_frames), max(orig_frames))
             interp_df <- data.frame(frame_num = interp_frames, id = id)
-            for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
-              interp_df[[col]] <- approx(orig_frames, df_id[[col]], xout = interp_frames)$y
+            for (col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
+              vals <- df_id[[col]]
+              if (length(orig_frames) >= 2 && sum(!is.na(vals)) >= 2) {
+                interp_df[[col]] <- approx(orig_frames, vals, xout = interp_frames, rule = 2)$y
+              } else if (sum(!is.na(vals)) == 1) {
+                interp_df[[col]] <- rep(na.omit(vals), length(interp_frames))
+              } else {
+                interp_df[[col]] <- rep(NA_real_, length(interp_frames))
+              }
+              
             }
             interp_df$propagated <- TRUE
             interp_df$prop_type <- "interp"
@@ -183,12 +197,15 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
       ### keep the global analysis reactive object up to date with internal analysis 
       #system without the buttons that only work if certain conditions in this panel are met being able to touch it 
       #this is vulnerable to loops if I edit df_analysis in such a way that it would change df_prop every time it is generated
-      observe({
-        req(df_prop())
-        df_analysis(df_prop())
-      })
-      
-      
+      # observe({
+      #   req(df_prop())
+      #   new_df <- df_prop()
+      #   old_df <- isolate(df_analysis())
+      #   if (!identical(new_df, old_df)) {
+      #     df_analysis(new_df)
+      #   }
+      # })
+      # 
       # Reactive to compute save path based on frame_paths() which ensures reasonable save names using reactivity chains 
       save_path <- reactive({
         req(frame_paths())

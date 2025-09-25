@@ -31,6 +31,9 @@ app_theme <- bs_theme(
   primary = "#FF6600",    
 )
 
+# Define UI ---------------------------------------------------------------
+
+
 ui <- navbarPage(
   "Fly Survival Tools",
   theme = app_theme,  
@@ -49,6 +52,9 @@ ui <- navbarPage(
              graph_panel()$ui
   )
 )
+
+# Define server -----------------------------------------------------------
+
 
 server <- function(input, output, session) {
   # Shared reactive values across modules

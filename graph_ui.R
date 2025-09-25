@@ -73,11 +73,11 @@ graph_panel <- function(df_analysis, frame_paths) {
       # ---- Cumulative sum ----
       output$frame_cumsum <- renderPlot({
         req(df_analysis())
+        df <- df_analysis()
         # Check if required columns exist
         if(!all(c("frame_num", "id") %in% names(df))) {
           showNotification("Analysis hasn't been run yet, so export panel is not ready", type = "warning")
         } else {
-        df <- df_analysis()
         first <- aggregate(frame_num ~ id, data = df, FUN = min)
         df_first <- merge(first, df, by = c("id", "frame_num"))
         
