@@ -50,24 +50,41 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
         area_inter / area_union
       }
       
+ 
       #### Run Analysis & propagate ####
       observeEvent(input$run_analysis, {
         # 1) Load the data
         inference_stats <- df_analysis()
-   
+        
         req(inference_stats, frame_paths())
+        
+        New_threshold <- input$iou_threshold
+        if (exists("threshold") && exists("New_threshold") && threshold != New_threshold) {
+          message("IOU threshold changed rerunning analysis.")
+          inference_stats$id <- NA_integer_
+        }
         
         # 2) Decide: analysis file vs raw stats
         is_analysis <- "id" %in% names(inference_stats)
-        
         if (is_analysis) {
           # ---- Already an analysis file: just keep as is ----
           message("File already contains IDs – skipping propagation.")
+          
           # make sure id is numeric
           inference_stats$id <- suppressWarnings(as.numeric(as.character(inference_stats$id)))
+          
+          
+          # Only count original IDs
+          original_rows <- inference_stats$prop_type == "original"
+          id_counts <- table(inference_stats$id[original_rows])
+          
+          keep_ids <- as.integer(names(id_counts[id_counts >= input$min_appearances]))
+          
+          # Keep only rows with those original IDs
+          inference_stats <- inference_stats[inference_stats$id %in% keep_ids, ]
           df_analysis(inference_stats)
-          return()
         }
+        
         
         # ---- Raw stats file: run the merging/propagation algorithm ----
         
@@ -77,7 +94,7 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
         }
         # Build polygons
         inference_stats$points <- apply(inference_stats[, c("x1","y1","x2","y2","x3","y3","x4","y4")],
-                           1, function(r) matrix(r, ncol = 2, byrow = TRUE), simplify = FALSE)
+                                        1, function(r) matrix(r, ncol = 2, byrow = TRUE), simplify = FALSE)
         inference_stats$manual <- inference_stats$manual %||% FALSE
         inference_stats$id <- NA_integer_
         
@@ -116,7 +133,7 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
               }
               next_id <- next_id + 1
             }
-           # incProgress(1/n)
+            incProgress(1/n)
           }
         })
         
@@ -126,86 +143,107 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
         inference_stats <- inference_stats[inference_stats$id %in% keep_ids, ]
         
         df_analysis(inference_stats)
-      })
+      }) 
+      
       
       #### Propagation reactive ####
       # this acts as a reactive dataset so that when something is removed or added it can update with the graph using an internal object
       df_prop <- reactive({
         df <- df_analysis()
-        req(!is.null(df), nrow(df) > 0)
-        # If the data is already propagated, skip
-        if("prop_type" %in% names(df)) {
+        req(!is.null(df), nrow(df) > 0, is.data.frame(df), "id" %in% names(df))
+        
+        # If already propagated, skip
+        if ("prop_type" %in% names(df)) {
           message("Boxes already propagated – skipping propagation")
           return(df)
         }
+        
         total_frames <- seq_len(length(frame_paths()))
         ids <- unique(df$id)
         
         req(length(ids) > 0)
-        withProgress(message="Propagating boxes...", value=0, {
+        
+        withProgress(message = "Propagating boxes...", value = 0, {
           interp_list <- lapply(seq_along(ids), function(idx) {
             
             id <- ids[idx]
-            df_id <- df[df$id==id, ] 
+            df_id <- df[df$id == id, ]
             orig_frames <- df_id$frame_num
             
             interp_frames <- seq(min(orig_frames), max(orig_frames))
             interp_df <- data.frame(frame_num = interp_frames, id = id)
+            
             for (col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
               vals <- df_id[[col]]
-              if (length(orig_frames) >= 2 && sum(!is.na(vals)) >= 2) {
-                interp_df[[col]] <- approx(orig_frames, vals, xout = interp_frames, rule = 2)$y
-              } else if (sum(!is.na(vals)) == 1) {
-                interp_df[[col]] <- rep(na.omit(vals), length(interp_frames))
-              } else {
-                interp_df[[col]] <- rep(NA_real_, length(interp_frames))
-              }
+              interp_vals <- rep(NA_real_, length(interp_frames))
               
+              if (length(orig_frames) >= 1 && sum(!is.na(vals)) >= 1) {
+                # Fill known values at original frames
+                interp_vals[match(orig_frames, interp_frames)] <- vals
+                # Carry last known forward
+                for (j in seq_along(interp_vals)) {
+                  if (is.na(interp_vals[j]) && j > 1) {
+                    interp_vals[j] <- interp_vals[j - 1]
+                  }
+                }
+              }
+              interp_df[[col]] <- interp_vals
             }
+            
             interp_df$propagated <- TRUE
-            interp_df$prop_type <- "interp"
-            #section making sure the dataset works whether you add a pupariation or not 
-            if(!"manual" %in% names(df_id)) {
+            interp_df$prop_type <- "forward"
+            
+            # Ensure manual column exists
+            if (!"manual" %in% names(df_id)) {
               df_id$manual <- FALSE
             } else {
-              df_id$manual <- as.logical(df_id$manual)  # ensure it's logical
+              df_id$manual <- as.logical(df_id$manual)
             }
             interp_df$manual <- any(df_id$manual)
             
-            for(f in orig_frames) {
+            # Mark original frames
+            for (f in orig_frames) {
               interp_df$prop_type[interp_df$frame_num == f] <- "original"
               interp_df$propagated[interp_df$frame_num == f] <- FALSE
             }
+            
+            # Mark first frame specially
             first_f <- min(orig_frames)
             interp_df$prop_type[interp_df$frame_num == first_f] <- "first"
-            if(max(orig_frames) < max(total_frames)) {
-              pupa_frames <- seq(max(orig_frames)+1, max(total_frames))
+            
+            # Extend into pupation phase by copying forward last known values
+            if (max(orig_frames) < max(total_frames)) {
+              pupa_frames <- seq(max(orig_frames) + 1, max(total_frames))
               pupa_df <- data.frame(frame_num = pupa_frames, id = id)
-              for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
-                pupa_df[[col]] <- approx(orig_frames, df_id[[col]], xout = pupa_frames, rule=2)$y
+              for (col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
+                last_val <- tail(na.omit(df_id[[col]]), 1)
+                pupa_df[[col]] <- rep(last_val, length(pupa_frames))
               }
-              pupa_df$propagated <- TRUE; pupa_df$prop_type <- "pupa"; pupa_df$manual <- any(df_id$manual)
+              pupa_df$propagated <- TRUE
+              pupa_df$prop_type <- "pupa"
+              pupa_df$manual <- any(df_id$manual)
               interp_df <- rbind(interp_df, pupa_df)
             }
-            incProgress(1/length(ids))
+            
+            incProgress(1 / length(ids))
             interp_df
           })
+          
           do.call(rbind, interp_list)
         })
       })
+      
+      
      
       ### keep the global analysis reactive object up to date with internal analysis 
       #system without the buttons that only work if certain conditions in this panel are met being able to touch it 
-      #this is vulnerable to loops if I edit df_analysis in such a way that it would change df_prop every time it is generated
-      # observe({
-      #   req(df_prop())
-      #   new_df <- df_prop()
-      #   old_df <- isolate(df_analysis())
-      #   if (!identical(new_df, old_df)) {
-      #     df_analysis(new_df)
-      #   }
-      # })
-      # 
+      # #this is vulnerable to loops if I edit df_analysis in such a way that it would change df_prop every time it is generated
+      observe({
+        req(df_prop())
+          df_analysis(df_prop())
+        }
+      )
+
       # Reactive to compute save path based on frame_paths() which ensures reasonable save names using reactivity chains 
       save_path <- reactive({
         req(frame_paths())
@@ -311,7 +349,7 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
             row <- boxes[i,]
             pts <- matrix(as.numeric(row[c("x1","y1","x2","y2","x3","y3","x4","y4")]), ncol=2, byrow=TRUE)
             xs <- c(pts[,1], pts[1,1]); ys <- c(pts[,2], pts[1,2])
-            col_box <- switch(as.character(row$prop_type), first="purple", original="red", interp="blue", pupa="green")
+            col_box <- switch(as.character(row$prop_type), first="purple", original="red", forward="blue", pupa="green")
             polygon(xs, ys, border=col_box, lwd=2)
             if(isTRUE(row$manual) && row$prop_type=="first") points(mean(xs), mean(ys), col="purple", pch=16, cex=1.5)
             text(mean(xs), mean(ys), labels=row$id, col=col_box, cex=0.8)
