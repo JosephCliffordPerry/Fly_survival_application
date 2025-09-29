@@ -1,8 +1,4 @@
-library(shiny)
-library(tiff)
-library(openxlsx)
-library(lubridate)
-library(ggplot2)
+
 
 graph_panel <- function(df_analysis, frame_paths) {
   list(

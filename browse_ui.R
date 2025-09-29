@@ -271,6 +271,12 @@ browse_panel <- function(df_analysis, frame_paths, stats_file=NULL) {
         df <- df_prop()
         req(!is.null(df))
         
+        # Remove list columns before saving
+        list_cols <- vapply(df, is.list, logical(1))
+        if (any(list_cols)) {
+          df <- df[ , !list_cols, drop = FALSE]
+        }
+        
         path <- save_path()
         write.table(df, file = path, sep = "\t", row.names = FALSE, quote = FALSE)
         
