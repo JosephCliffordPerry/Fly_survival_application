@@ -43,7 +43,7 @@ run_inference_multi <- function(image_dir, stats_file, iou_threshold = 0.5) {
 
   # --- Load Python env ---
   Sys.setenv(RETICULATE_PYTHON = "managed")
-  reticulate::py_require(packages = c("ultralytics", "numpy"), python_version = "3.12.4")
+  reticulate::py_require(packages = c("imageio-ffmpeg","ultralytics", "numpy"), python_version = "3.12.4")
   np <- reticulate::import("numpy")
   ultralytics <- reticulate::import("ultralytics")
 

@@ -14,7 +14,7 @@ get_ffmpeg_path <- function() {
 
   # Ensure Python + required packages exist
   reticulate::py_require(
-    packages = c("imageio-ffmpeg"),
+    packages = c("imageio-ffmpeg","ultralytics", "numpy"),
     python_version = "3.12.4" # lock Python version
   )
 

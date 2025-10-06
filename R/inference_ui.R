@@ -7,7 +7,7 @@ inference_panel <- function() {
 
         shiny::sidebarLayout(
           shiny::sidebarPanel(
-            shinyFiles::shinyDirButton("image_dir", "Choose Image Subfolder", "Select a folder inside avi_frames"),
+            shinyFiles::shinyDirButton("image_dir", "Choose Image Subfolder", "Select a folder"),
             shiny::textInput("stats_filename", "Output File Name (without extension):", "inference_results"),
             shiny::numericInput("iou", "IoU Threshold:", 0.5, min = 0, max = 1, step = 0.05),
             shiny::actionButton("run_inference", "Run Inference", class = "btn-success")
@@ -21,7 +21,20 @@ inference_panel <- function() {
     ),
 
     server = function(input, output, session) {
-      roots <- c(avi_frames = base::normalizePath(base::file.path(getwd(), "avi_frames")))
+      # Detect OS drives for shinyFiles
+      if (.Platform$OS.type == "windows") {
+        drives <- paste0(LETTERS, ":/")
+        drives <- drives[file.exists(drives)]
+        roots <- setNames(drives, drives)
+      } else {
+        roots <- c(root = "/")
+      }
+      # Add avi_frames folder as a named shortcut
+      avi_path <- file.path(getwd(), "avi_frames")
+      if (dir.exists(avi_path)) {
+        roots <- c(avi_frames = normalizePath(avi_path), roots)
+      }
+
       shinyFiles::shinyDirChoose(input, "image_dir", roots = roots, session = session)
 
       output$inference_log <- shiny::renderText({
@@ -32,7 +45,7 @@ inference_panel <- function() {
         shiny::req(input$image_dir)
 
         image_dir <- shinyFiles::parseDirPath(roots, input$image_dir)
-        stats_dir <- base::file.path(getwd(), "statsdir")
+        stats_dir <- file.path(getwd(), "statsdir")
 
         # Ensure all filenames end with _raw.txt
         base_name <- tools::file_path_sans_ext(input$stats_filename)
@@ -45,7 +58,7 @@ inference_panel <- function() {
           )
           output$inference_log <- shiny::renderText("Inference completed successfully!")
         }, error = function(e) {
-          output$inference_log <- shiny::renderText(base::paste("Error:", e$message))
+          output$inference_log <- shiny::renderText(paste("Error:", e$message))
         })
       })
     }

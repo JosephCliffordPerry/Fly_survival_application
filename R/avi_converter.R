@@ -22,7 +22,7 @@ Avi_to_tiff <- function(video_folder, log_fun = NULL) {
       # Run ffmpeg and capture exit status
       exit_status <- system2(
         ffmpeg_path,
-        args = c("-i", avi_file, "-pix_fmt", "rgb24", "-color_range", "pc", output_pattern)
+        args = c("-i", shQuote(avi_file), "-pix_fmt", "rgb24", "-color_range", "pc", shQuote(output_pattern))
       )
 
       msg <- if (exit_status == 0) {
