@@ -1,6 +1,9 @@
 run_inference_multi <- function(image_dir, stats_file, iou_threshold = 0.5) {
-  model_paths <- base::list.files("models", full.names = TRUE)
-
+  # locate models in installed package
+  model_dir <- system.file("models", package = "flySurvivalApp")
+  if (model_dir == "") stop("Could not find models folder in the package installation")
+  model_paths <- list.files(model_dir, pattern = "\\.pt$", full.names = TRUE)
+  if (length(model_paths) == 0) stop("No .pt model files found in the package models folder")
   # --- Safe IoU function ---
   obb_iou <- function(obb1, obb2) {
     safe_poly <- function(obb) {
