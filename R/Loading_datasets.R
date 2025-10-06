@@ -49,7 +49,7 @@ data_load_panel <- function(df_analysis, frame_paths) {
       # ---- Load stats helper ----
       load_stats <- function(file) {
         shiny::req(file)
-        df <- base::read.table(file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+        df <- utils::read.table(file, stringsAsFactors = FALSE,header = TRUE)
         shiny::showNotification("Dataset loaded", type = "message")
         df
       }

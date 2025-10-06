@@ -8,6 +8,7 @@
 #' @import lubridate
 #' @import openxlsx
 #' @import tiff
+#' @importFrom utils read.table
 #' @importFrom stats setNames
 #' @importFrom utils tail
 

@@ -2,7 +2,7 @@ Avi_to_tiff <- function(video_folder, log_fun = NULL) {
   ffmpeg_path <- get_ffmpeg_path()
   if (!file.exists(ffmpeg_path)) stop("FFmpeg not found at: ", ffmpeg_path)
 
-  avi_files <- list.files(video_folder, pattern = "\\.AVI$", full.names = TRUE)
+  avi_files <- list.files(video_folder, pattern = "\\.avi$", full.names = TRUE, ignore.case = TRUE)
   if (length(avi_files) == 0) {
     if (!is.null(log_fun)) log_fun("No AVI files found in folder")
     return()
