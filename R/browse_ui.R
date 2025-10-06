@@ -56,6 +56,22 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
       #### Run Analysis & propagate ####
       shiny::observeEvent(input$run_analysis, {
         inference_stats <- df_analysis()
+        # Ensure we have a data.frame with rows
+        if (is.null(inference_stats) || !is.data.frame(inference_stats) || nrow(inference_stats) == 0) {
+          stop("run_analysis aborted: df_analysis() must be a non-empty data.frame")
+        }
+
+        # Ensure frame_paths available
+        if (is.null(frame_paths()) || length(frame_paths()) == 0) {
+          stop("run_analysis aborted: no frames available (frame_paths() is empty)")
+        }
+
+        # sanity: required coordinate columns exist
+        required_cols <- c("x1","y1","x2","y2","x3","y3","x4","y4","frame")
+        missing_cols <- setdiff(required_cols, names(inference_stats))
+        if (length(missing_cols) > 0) {
+          stop("run_analysis aborted: missing required columns: ", paste(missing_cols, collapse = ", "))
+        }
         shiny::req(inference_stats, frame_paths())
 
         New_threshold <- input$iou_threshold
