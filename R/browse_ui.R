@@ -215,10 +215,10 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
         base_file <- basename(frame_paths()[1])
         base_name <- tools::file_path_sans_ext(base_file)
         base_name <- gsub("\\..*$", "", base_name)
-        candidate <- file.path("statsdir", paste0(base_name, "_processed.txt"))
+        candidate <- file.path("flySurvivalApp_output", paste0(base_name, "_processed.txt"))
         counter <- 1
         while(file.exists(candidate)) {
-          candidate <- file.path("statsdir", paste0(base_name, "_processed_", counter, ".txt"))
+          candidate <- file.path("flySurvivalApp_output", paste0(base_name, "_processed_", counter, ".txt"))
           counter <- counter + 1
         }
         candidate

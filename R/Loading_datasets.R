@@ -42,7 +42,7 @@ data_load_panel <- function(df_analysis, frame_paths) {
 
       output$stats_file_ui <- shiny::renderUI({
         shiny::req(!isTRUE(input$custom_paths))
-        stats_files <- base::list.files("statsdir", pattern = ".txt$", full.names = FALSE)
+        stats_files <- base::list.files("flySurvivalApp_output", pattern = ".txt$", full.names = FALSE)
         shiny::selectInput("stats_file", "Analysis File:", choices = .nz(stats_files))
       })
 
@@ -61,7 +61,7 @@ data_load_panel <- function(df_analysis, frame_paths) {
           stats_file <- shinyFiles::parseFilePaths(roots, input$custom_stats_file)$datapath
         } else {
           frame_dir  <- base::file.path("avi_frames", input$frame_folder)
-          stats_file <- base::file.path("statsdir", input$stats_file)
+          stats_file <- base::file.path("flySurvivalApp_output", input$stats_file)
         }
 
         shiny::req(frame_dir, stats_file)

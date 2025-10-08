@@ -45,7 +45,7 @@ inference_panel <- function() {
         shiny::req(input$image_dir)
 
         image_dir <- shinyFiles::parseDirPath(roots, input$image_dir)
-        stats_dir <- file.path(getwd(), "statsdir")
+        stats_dir <- file.path(getwd(), "flySurvivalApp_output")
 
         # Ensure all filenames end with _raw.txt
         base_name <- tools::file_path_sans_ext(input$stats_filename)

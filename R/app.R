@@ -27,7 +27,7 @@ Load_fly_app <- function() {
   # source("R/largest_box_panel.R")
 
   # ---- Make Sub-directories ----
-  folders <- c("statsdir", "avi_frames")
+  folders <- c("flySurvivalApp_output", "avi_frames")
   for (folder in folders) {
     if (!dir.exists(folder)) {
       dir.create(folder)

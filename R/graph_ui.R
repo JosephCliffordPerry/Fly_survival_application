@@ -97,10 +97,10 @@ graph_panel <- function(df_analysis, frame_paths) {
         base_file <- base::basename(frame_paths()[1])
         base_name <- tools::file_path_sans_ext(base_file)
         base_name <- base::gsub("\\..*$", "", base_name)
-        candidate <- base::file.path("statsdir", paste0(base_name, "_export.xlsx"))
+        candidate <- base::file.path("flySurvivalApp_output", paste0(base_name, "_export.xlsx"))
         counter <- 1
         while (base::file.exists(candidate)) {
-          candidate <- base::file.path("statsdir", paste0(base_name, "_export_", counter, ".xlsx"))
+          candidate <- base::file.path("flySurvivalApp_output", paste0(base_name, "_export_", counter, ".xlsx"))
           counter <- counter + 1
         }
         candidate
