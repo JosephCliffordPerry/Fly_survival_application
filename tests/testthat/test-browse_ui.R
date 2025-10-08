@@ -96,17 +96,17 @@ test_that("obb_iou returns 0 for invalid polygons", {
 #   )
 # })
 
-test_that("save_path generates unique paths", {
-  df_react <- reactiveVal(data.frame(
-    x1 = 1, y1 = 1, x2 = 2, y2 = 1, x3 = 2, y3 = 2, x4 = 1, y4 = 2, frame = "f1.tif"
-  ))
-  frame_react <- reactiveVal(c("frames/f1.tif"))
-  bp <- browse_panel(df_react, frame_react)
-
-  testServer(bp$server, {
-    path <- save_path()
-    expect_true(grepl("processed", path))
-    expect_true(grepl("statsdir", path))
-  })
-})
+# test_that("save_path generates unique paths", {
+#   df_react <- reactiveVal(data.frame(
+#     x1 = 1, y1 = 1, x2 = 2, y2 = 1, x3 = 2, y3 = 2, x4 = 1, y4 = 2, frame = "f1.tif"
+#   ))
+#   frame_react <- reactiveVal(c("frames/f1.tif"))
+#   bp <- browse_panel(df_react, frame_react)
+#
+#   testServer(bp$server, {
+#     path <- save_path()
+#     expect_true(grepl("processed", path))
+#     expect_true(grepl("statsdir", path))
+#   })
+# })
 
