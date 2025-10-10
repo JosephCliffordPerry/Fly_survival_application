@@ -150,8 +150,9 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
       df_prop <- shiny::reactive({
         df <- df_analysis()
         shiny::req(!is.null(df), nrow(df) > 0, is.data.frame(df), "id" %in% names(df))
+
         if("prop_type" %in% names(df)) {
-          message("Boxes already propagated skipping propagation")
+          message("Boxes already propagated, skipping propagation")
           return(df)
         }
 
@@ -165,7 +166,11 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
             df_id <- df[df$id == id, ]
             orig_frames <- df_id$frame_num
             interp_frames <- seq(min(orig_frames), max(orig_frames))
+
+            # Create the interpolation data frame
             interp_df <- data.frame(frame_num = interp_frames, id = id)
+            interp_df$frame <- basename(frame_paths())[interp_df$frame_num]
+
             for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
               vals <- df_id[[col]]
               interp_vals <- rep(NA_real_, length(interp_frames))
@@ -177,9 +182,11 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
               }
               interp_df[[col]] <- interp_vals
             }
+
             interp_df$propagated <- TRUE
             interp_df$prop_type <- "forward"
             interp_df$manual <- any(df_id$manual %||% FALSE)
+
             for(f in orig_frames) {
               interp_df$prop_type[interp_df$frame_num == f] <- "original"
               interp_df$propagated[interp_df$frame_num == f] <- FALSE
@@ -187,9 +194,11 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
             first_f <- min(orig_frames)
             interp_df$prop_type[interp_df$frame_num == first_f] <- "first"
 
+            # Handle pupa frames after last original
             if(max(orig_frames) < max(total_frames)) {
               pupa_frames <- seq(max(orig_frames)+1, max(total_frames))
               pupa_df <- data.frame(frame_num = pupa_frames, id = id)
+              pupa_df$frame <- basename(frame_paths())[pupa_df$frame_num]
               for(col in c("x1","y1","x2","y2","x3","y3","x4","y4")) {
                 last_val <- tail(stats::na.omit(df_id[[col]]), 1)
                 pupa_df[[col]] <- rep(last_val, length(pupa_frames))
@@ -205,6 +214,7 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
           do.call(rbind, interp_list)
         })
       })
+
 
       #### Update global df_analysis ####
       shiny::observe({ df_analysis(df_prop()) })
