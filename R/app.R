@@ -16,15 +16,32 @@
 #' @export
 Load_fly_app <- function() {
 
-  # # ---- Source module scripts ----
-  # source("R/avi_ui.R")
-  # source("R/inference_ui.R")
-  # source("R/Loading_datasets.R")
-  # source("R/python_inference.R")
-  # source("R/avi_converter.R")
-  # source("R/graph_ui.R")
-  # source("R/browse_ui.R")
-  # source("R/largest_box_panel.R")
+  # ---- Helper functions ----
+
+  #' Get path to a manual file
+  #' Safely finds manual files whether the package is installed or run from source.
+  get_manual <- function(file) {
+    path <- system.file("manuals", file, package = "flySurvivalApp")
+    if (path == "" || !file.exists(path)) {
+      path <- file.path("inst", "manuals", file)
+    }
+    if (!file.exists(path)) {
+      message("Manual file not found: ", path)
+      return(NULL)
+    }
+    return(path)
+  }
+
+  #' Safe wrapper for including markdown
+  safe_include_markdown <- function(path) {
+    if (is.null(path) || !file.exists(path)) {
+      return(shiny::HTML("<p><em>Manual not available.</em></p>"))
+    }
+    if (!requireNamespace("markdown", quietly = TRUE)) {
+      return(shiny::HTML("<p><em>The <code>markdown</code> package is missing. Manuals cannot be displayed.</em></p>"))
+    }
+    shiny::includeMarkdown(path)
+  }
 
   # ---- Make Sub-directories ----
   folders <- c("flySurvivalApp_output", "avi_frames")
@@ -61,12 +78,21 @@ Load_fly_app <- function() {
                       browse_panel()$ui,
                       largest_box_panel()$ui,
                       graph_panel()$ui
+    ),
+
+    # Group 3: Help / Manuals
+    shiny::navbarMenu("Help",
+                      shiny::tabPanel("AVI to TIFF Converter", safe_include_markdown(get_manual("help_avi_to_tiff.md"))),
+                      shiny::tabPanel("Inference", safe_include_markdown(get_manual("help_inference.md"))),
+                      shiny::tabPanel("Data Loading", safe_include_markdown(get_manual("help_data_load.md"))),
+                      shiny::tabPanel("Browsing", safe_include_markdown(get_manual("help_browse.md"))),
+                      shiny::tabPanel("Largest Box Detection", safe_include_markdown(get_manual("help_largest_box.md"))),
+                      shiny::tabPanel("Graph Analysis", safe_include_markdown(get_manual("help_graph.md")))
     )
   )
 
   # ---- Define server ----
   server <- function(input, output, session) {
-    # Shared reactive values across modules
     df_analysis <- shiny::reactiveVal(NULL)
     frame_paths <- shiny::reactiveVal(NULL)
 
@@ -78,7 +104,6 @@ Load_fly_app <- function() {
     largest_box_panel(df_analysis = df_analysis, frame_paths = frame_paths)$server(input, output, session)
     graph_panel(df_analysis = df_analysis, frame_paths = frame_paths)$server(input, output, session)
 
-    # Update frame_paths when user selects a folder in data_load_panel
     shiny::observe({
       shiny::req(input$frame_folder)
       folder <- file.path("avi_frames", input$frame_folder)
