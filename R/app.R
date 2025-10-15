@@ -18,8 +18,8 @@ Load_fly_app <- function() {
 
   # ---- Helper functions ----
 
-  #' Get path to a manual file
-  #' Safely finds manual files whether the package is installed or run from source.
+  # Get path to a manual file
+  # Safely finds manual files whether the package is installed or run from source.
   get_manual <- function(file) {
     path <- system.file("manuals", file, package = "flySurvivalApp")
     if (path == "" || !file.exists(path)) {
@@ -32,7 +32,7 @@ Load_fly_app <- function() {
     return(path)
   }
 
-  #' Safe wrapper for including markdown
+  # Safe wrapper for including markdown
   safe_include_markdown <- function(path) {
     if (is.null(path) || !file.exists(path)) {
       return(shiny::HTML("<p><em>Manual not available.</em></p>"))
