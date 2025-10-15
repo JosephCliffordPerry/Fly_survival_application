@@ -1,4 +1,4 @@
-# 📊 Export Panel (Graph Panel) User Manual
+# 📊 Export Panel User Manual
 
 ## 📝 Overview
 

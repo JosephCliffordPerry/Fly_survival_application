@@ -88,7 +88,7 @@ Load_fly_app <- function() {
                       shiny::tabPanel("Data Loading", safe_include_markdown(get_manual("help_data_load.md"))),
                       shiny::tabPanel("Browsing", safe_include_markdown(get_manual("help_browse.md"))),
                       shiny::tabPanel(" Single Pupa browsing", safe_include_markdown(get_manual("help_largest_box.md"))),
-                      shiny::tabPanel("Graph Analysis", safe_include_markdown(get_manual("help_graph.md")))
+                      shiny::tabPanel("Export", safe_include_markdown(get_manual("help_graph.md")))
     )
   )
 
