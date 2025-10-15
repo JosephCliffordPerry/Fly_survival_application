@@ -1,40 +1,69 @@
-How the general pipeline works
+# 🪰 General Pipeline Overview
 
-This software is designed to work in conjunction with the terrariums and produces 
-an excel file containing every detected pupariation in a video recorded by one. 
+This software processes videos recorded in terrariums and generates an Excel file containing every detected **pupariation event**.  
+It combines automated neural network inference with manual validation tools to ensure accurate detection and timing.
 
-General pipeline steps 
+---
 
-1: The video is converted from avi to individual frames by the AVI->TIFF
+## ⚙️ Pipeline Steps
 
-2: The inference tab to runs a neural network inference on the individual 
-   frames detecting each appearance of a pupa in a inference results file 
+### **1. Convert Video to Frames**
 
-3: The Data and Images tab is used to load the avi frames and the inference
-   results file so that the detected pupa and can be overlaid on the images
-   for checking the quality of detections  
-   
-4: The next step is the most complex and uses both the browse inferences and 
-   individual pupa browser and so is broken down in substeps
+Use the **AVI → TIFF Converter** to transform your recorded `.avi` video into a sequence of individual image frames.  
+These frames serve as the foundation for all subsequent analysis steps.
 
-4.1: The first step is using the Load/analyse input file to organised the run
-     of creating ids for each individual pupa and propagating them. The merging
-     IoU threshold is the intersection over union required to merge the 
-     orientated bounding boxes over the frames. The minimum appearances per ID
-     filter allows for the  removal  of potentially spurious  ids by filtering 
-     out IDs  of pupa that appear less than that number of times. It may need to
-     be increased from the default to remove objects misidentified as pupa
-     
-4.2: The manual step now is the validation of the bounding boxes and checking 
-     the whether the pupa have been detected for the first time correctly. This 
-     uses a combination of the browse panel and the single pupa panel to remove
-     false detentions using their id number and the box to make sure the correct
-     point of pupariation is used for the export with the move first appearance 
-     button and slider. 
-     
-5:  Once you are happy with the pupariations being at the correct timing you 
-    then should add your meta data to the export tab, use the slider to split 
-    the left and right side then click export to send the export to the output  
-    folder in your directory.
-     
-     
+---
+
+### **2. Run Neural Network Inference**
+
+In the **Inference** tab, run the neural network on the extracted frames.  
+This step automatically detects pupae appearances and creates an **inference results file** that contains all detections.
+
+---
+
+### **3. Load Data and Images**
+
+Next, open the **Data and Images** tab to load:
+- The folder containing the extracted image frames, and  
+- The corresponding inference results file.  
+
+Detected pupae are overlaid on the images, allowing you to visually inspect and assess the detection quality.
+
+---
+
+### **4. Review and Refine Detections**
+
+This is the most detailed stage and uses both the **Browse Inferences** and **Individual Pupa Browser** panels.
+
+#### **4.1. Automated ID Assignment and Filtering**
+
+Use **Load/Analyse Input File** to:
+- Assign IDs to each detected pupa,  
+- Propagate IDs across frames, and  
+- Apply filters to clean up detections.
+
+Key parameters:
+- **Merging IoU Threshold:** Defines the overlap (intersection-over-union) required to merge bounding boxes across frames.  
+- **Minimum Appearances per ID:** Filters out IDs that appear fewer than the specified number of times, helping to remove spurious detections.
+
+#### **4.2. Manual Validation**
+
+Manually verify and adjust detections to ensure accurate identification and first appearance timing.  
+
+Use:
+- The **Browse Panel** and **Single Pupa Panel** to inspect individual pupae by ID,  
+- The **Move First Appearance** button and slider to fine-tune timing, and  
+- The deletion tools to remove false detections.
+
+---
+
+### **5. Export Results**
+
+Once you’re satisfied with the validated detections:
+
+1. Add your **metadata** in the **Export** tab.  
+2. Use the **split slider** to define the left and right sides of the terrarium.  
+3. Click **Export** to generate the final Excel output file.
+
+The exported file will be saved in your working directory under the folder:
+
