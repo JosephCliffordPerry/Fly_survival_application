@@ -82,11 +82,12 @@ Load_fly_app <- function() {
 
     # Group 3: Help / Manuals
     shiny::navbarMenu("Help",
+                      shiny::tabPanel("Pipeline overview", safe_include_markdown(get_manual("help_pipeline_overview.md"))),
                       shiny::tabPanel("AVI to TIFF Converter", safe_include_markdown(get_manual("help_avi_to_tiff.md"))),
                       shiny::tabPanel("Inference", safe_include_markdown(get_manual("help_inference.md"))),
                       shiny::tabPanel("Data Loading", safe_include_markdown(get_manual("help_data_load.md"))),
                       shiny::tabPanel("Browsing", safe_include_markdown(get_manual("help_browse.md"))),
-                      shiny::tabPanel("Largest Box Detection", safe_include_markdown(get_manual("help_largest_box.md"))),
+                      shiny::tabPanel(" Single Pupa browsing", safe_include_markdown(get_manual("help_largest_box.md"))),
                       shiny::tabPanel("Graph Analysis", safe_include_markdown(get_manual("help_graph.md")))
     )
   )
