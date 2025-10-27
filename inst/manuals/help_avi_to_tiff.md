@@ -1,14 +1,14 @@
----
- AVI → TIFF Conversion Panel
----
 
-# Overview
+#AVI → TIFF Conversion Panel
+
+
+## Overview
 
 This document serves as a **user manual** for the **AVI → TIFF Conversion Panel**, a Shiny module that allows users to convert `.avi` video files into `.tiff` image frame sequences.  
 
 The panel provides a **graphical interface** for selecting folders containing `.avi` files, running conversions using **FFmpeg**, and viewing conversion logs in real time.
 
----
+
 
 #  Purpose of the Panel
 
