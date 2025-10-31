@@ -1,20 +1,12 @@
-# 🧭 Browse Panel User Manual
+# Browse Panel User Manual
 
-## 📝 Overview
+## Overview
 
 The `browse_panel()` **Shiny module** provides an interactive interface for browsing, analyzing, and propagating object detections across sequential image frames (TIFF images extracted from videos).  
 It is part of the **FlySurvival App pipeline** and is designed to **visualize, merge, and edit inference results** derived from previous analysis steps.
 
-📥 Arguments
-Argument	Type	Description
-df_analysis	reactive data frame	Reactive container holding inference results (bounding boxes, frame numbers, etc.).
-frame_paths	reactive character vector	Reactive list of TIFF frame paths to be browsed.
-stats_file	character (optional)	Optional path to a saved analysis file for reloading prior results.
 
-🧩 UI Layout
-The UI is structured as a Shiny tab panel with a sidebar and a main content area.
-
-🔹 Sidebar Components
+### Sidebar Components
 Control	Type	Purpose
 IoU Threshold (iou_threshold)	Numeric Input	Sets the Intersection-over-Union (IoU) threshold for merging overlapping boxes (default: 0.3).
 Minimum Appearances per ID (min_appearances)	Numeric Input	Filters out object IDs appearing fewer than this number of times (default: 2). 
@@ -24,11 +16,11 @@ Save Analysis File (save_analysis)	Action Button	Saves the current propagated da
 Remove ID (remove_id, remove_id_btn)	Numeric Input + Button	Removes a specific object ID from the current analysis.
 Frame Slider (frame_slider_ui)	Dynamic UI	Slider for navigating between image frames.
 
-🔸 Main Panel Components
+### Main Panel Components
 Output	Type	Description
 Frame Preview (frame_plot)	Plot Output	Displays the current frame with bounding boxes overlaid and color-coded by type.
 
-🔄 Workflow
+### Workflow
 Step 1: Load Inference Data
 Click “Load/Analyse input file” to load bounding box data from the provided df_analysis object.
 
@@ -69,12 +61,8 @@ Toggle “Show Only Propagated Boxes” to view only algorithmically generated b
 Step 5: Saving Results
 Click “Save Analysis File” to write the propagated dataset to:
 
-php-template
-Copy code
-flySurvivalApp_output/<base_name>_processed.txt
-If the file exists, a numeric suffix (_1, _2, etc.) is appended automatically.
 
-💾 Output Data Format
+Output Data Format
 The saved .txt file includes the following columns:
 
 Column	Description
@@ -86,12 +74,12 @@ propagated	TRUE if box was propagated
 prop_type	Propagation type (first, original, forward, pupa)
 manual	TRUE if manually added
 
-🖱️ Interactivity Notes
+### Interactivity Notes
 Click Events
 Clicking inside a frame adds a new pupariation box centered at the click location.
 The box is propagated to all subsequent frames automatically.
 
-Notifications
+### Notifications
 Shiny notifications appear for:
 
 ✅ Successful file saves
@@ -100,12 +88,7 @@ Shiny notifications appear for:
 
 ⚠️ Errors during analysis
 
-⚠️ Error Handling
-Error Type	Trigger	Resolution
-Missing columns	df_analysis lacks required fields	Ensure x1…y4 and frame columns are present.
-Empty frame list	frame_paths is empty	Verify TIFF files are correctly loaded.
-Invalid IoU	Malformed or self-intersecting polygons	Check sf installation and polygon coordinate validity.
 
-🧠 Summary
+### Summary
 The Browse Panel is designed to visualize, edit, and propagate object detections across sequential image frames.
 It complements automated inference by enabling manual inspection, ID correction, and refinement of tracking results for export.

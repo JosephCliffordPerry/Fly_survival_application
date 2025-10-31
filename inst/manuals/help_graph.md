@@ -1,6 +1,6 @@
-# 📊 Export Panel User Manual
+# Export Panel User Manual
 
-## 📝 Overview
+## Overview
 
 The `graph_panel()` **Shiny module** provides an interface to **format, visualize, and export** first pupariation events from the tracked dataset.  
 It allows users to:
@@ -12,10 +12,7 @@ It allows users to:
 
 ---
 
-🧩 UI Layout
-The UI is a Shiny tab panel with a sidebar for metadata input and main panel for frame preview and plots.
-
-🔹 Sidebar Components
+ Sidebar Components
 Control	|Type|Purpose
 Start Date |Date Input|	Specify the start date for event timing.
 Start Time | Text Input|	Specify start time in HH:MM format.
@@ -24,12 +21,12 @@ Left Side Info | Group of Inputs	|Treatment, Dose, Dose Unit, Genotype, Replicat
 Right Side Info	| Group of Inputs|	Same as Left chamber for Right side.
 Export Excel (export_excel)|	Action Button|	Export formatted dataset to Excel file.
 
-🔸 Main Panel Components
+ Main Panel Components
 Output	Type	Description
 Frame Preview (frame_plot2)	Plot Output	Displays first frame with chamber split line overlaid.
 Cumulative First Pupariations (frame_cumsum)	Plot Output	Shows stepwise cumulative pupariation events over time for Left and Right chambers.
 
-🔄 Workflow
+ Workflow
 Step 1: Set Experiment Metadata
 Enter start date and time.
 
@@ -60,11 +57,6 @@ Plot shows stepwise cumulative counts over time.
 Step 4: Export Excel
 Click Export Excel to save data to:
 
-objectivec
-Copy code
-flySurvivalApp_output/<base_name>_export.xlsx
-If the file exists, numeric suffixes (_1, _2, etc.) are appended automatically.
-
 Excel contains two sheets: Left and Right, with columns:
 
 Column	Description
@@ -80,20 +72,7 @@ Replicate	From metadata input
 Step 5: Notes on Timing Calculation
 Frame intervals are assumed to be 5 minutes per frame.
 
-datetime is calculated as:
-
-ini
-Copy code
-datetime = start_datetime + (frame_num - min(frame_num)) * 5 minutes
-Side determination uses the average x-coordinate of bounding box corners compared to chamber split.
-
-⚠️ Notes
-Feature	Behavior / Notes
-Chamber Split	Must match physical chamber layout in image for accurate side assignment.
-Cumulative Plot	Requires frame_num and id columns in df_analysis.
-Export	Uses openxlsx package to save Excel file.
-
-🧠 Summary
+Summary
 The Export Panel enables users to prepare and save experiment-ready datasets from tracking data, including:
 
 Frame preview for checking chamber alignment

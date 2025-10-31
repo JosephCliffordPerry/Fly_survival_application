@@ -1,6 +1,6 @@
-## 🗂️ Data Load Panel User Manual
+##️ Data Load Panel User Manual
 
-### 📝 Overview
+### Overview
 
 The `data_load_panel()` Shiny module provides an interface for loading datasets and corresponding TIFF image frames for analysis.  
 It allows users to select predefined folders within the Fly Survival App directory structure or browse anywhere on the computer to import frames and analysis files.
@@ -9,7 +9,7 @@ This panel is usually the **first step** in the Fly Survival App workflow, prepa
 
 ---
 
-### 🧩 UI Layout
+### UI Layout
 
 The user interface is a Shiny **tab panel** composed of:
 
@@ -18,7 +18,7 @@ The user interface is a Shiny **tab panel** composed of:
 
 ---
 
-### 🔹 Sidebar Components
+### Sidebar Components
 
 | Control | Type | Purpose |
 |----------|------|----------|
@@ -29,17 +29,7 @@ The user interface is a Shiny **tab panel** composed of:
 | **Choose Stats File** (`custom_stats_file`) | `shinyFilesButton` | Selects any `.txt` analysis file on the computer (shown when `custom_paths = TRUE`). |
 | **Load / Reload Dataset** (`reload_stats_btn`) | Action Button | Loads or reloads the selected dataset and frame files. |
 
----
-
-### 🔸 Main Panel Components
-
-| Output | Type | Description |
-|---------|------|-------------|
-| **Instruction Text** | HTML / Text | Explains how to choose frame subfolders and analysis files, or use the browse-anywhere option. |
-
----
-
-### 🔄 Workflow
+###  Workflow
 
 #### **Step 1: Select Data Source**
 
@@ -77,7 +67,7 @@ The module requires:
 - **Frames:** TIFF files (`.tif`) with filenames containing frame numbers.  
 - **Analysis file:** Tabular `.txt` file with bounding box data from inference.
 
-⚠️ Any missing or incorrect paths will prevent dataset loading until corrected.
+⚠Any missing or incorrect paths will prevent dataset loading until corrected.
 
 ---
 
@@ -90,7 +80,7 @@ Once data is successfully loaded, two **reactive elements** are created internal
 
 ---
 
-### ⚠️ Notes
+### ️ Notes
 
 | Feature | Behavior / Notes |
 |----------|------------------|
@@ -101,7 +91,7 @@ Once data is successfully loaded, two **reactive elements** are created internal
 
 ---
 
-### 🧠 Summary
+###  Summary
 
 The **Data Load Panel** ensures that the Fly Survival App has **consistent and correctly ordered image frames** and **associated analysis data** for all downstream processes.  
 It offers flexibility to work with either the **default internal folder structure** or **custom directories** on the user’s computer.

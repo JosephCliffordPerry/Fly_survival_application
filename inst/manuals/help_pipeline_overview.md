@@ -5,7 +5,7 @@ It combines automated neural network inference with manual validation tools to e
 
 ---
 
-## ⚙️ Pipeline Steps
+## Pipeline Steps
 
 ### **1. Convert Video to Frames**
 
@@ -24,8 +24,9 @@ This step automatically detects pupae appearances and creates an **inference res
 ### **3. Load Data and Images**
 
 Next, open the **Data and Images** tab to load:
-- The folder containing the extracted image frames, and  
-- The corresponding inference results file.  
+
+🪰  The folder containing the extracted image frames, and  
+🪰  The corresponding inference results file.  
 
 Detected pupae are overlaid on the images, allowing you to visually inspect and assess the detection quality.
 
@@ -38,22 +39,25 @@ This is the most detailed stage and uses both the **Browse Inferences** and **In
 #### **4.1. Automated ID Assignment and Filtering**
 
 Use **Load/Analyse Input File** to:
-- Assign IDs to each detected pupa,  
-- Propagate IDs across frames, and  
-- Apply filters to clean up detections.
+
+🪰  Assign IDs to each detected pupa,  
+🪰  Propagate IDs across frames, and  
+🪰  Apply filters to clean up detections.
 
 Key parameters:
-- **Merging IoU Threshold:** Defines the overlap (intersection-over-union) required to merge bounding boxes across frames.  
-- **Minimum Appearances per ID:** Filters out IDs that appear fewer than the specified number of times, helping to remove spurious detections.
+
+🪰  **Merging IoU Threshold:** Defines the overlap (intersection-over-union) required to merge bounding boxes across frames.  
+🪰  **Minimum Appearances per ID:** Filters out IDs that appear fewer than the specified number of times, helping to remove spurious detections.
 
 #### **4.2. Manual Validation**
 
 Manually verify and adjust detections to ensure accurate identification and first appearance timing.  
 
 Use:
-- The **Browse Panel** and **Single Pupa Panel** to inspect individual pupae by ID,  
-- The **Move First Appearance** button and slider to fine-tune timing, and  
-- The deletion tools to remove false detections.
+
+🪰  The **Browse Panel** and **Single Pupa Panel** to inspect individual pupae by ID,  
+🪰  The **Move First Appearance** button and slider to fine-tune timing, and  
+🪰  The deletion tools to remove false detections.
 
 ---
 
