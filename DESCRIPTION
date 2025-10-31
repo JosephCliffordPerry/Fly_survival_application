@@ -5,17 +5,17 @@ Authors@R:
     person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
 Description: What the package does (one paragraph).
 Imports:
-    dplyr,
-    lubridate,
-    openxlsx,
-    sf,
-    shinyFiles,
-    tiff,
-    bslib,
-    ggplot2,
-    reticulate,
-    shiny,
-    markdown
+     dplyr (== 1.1.4),
+    lubridate (== 1.9.4),
+    openxlsx (== 4.2.8),
+    sf (== 1.0.21),
+    shinyFiles (== 0.9.3),
+    tiff (== 0.1.12),
+    bslib (== 0.9.0),
+    ggplot2 (== 3.5.2),
+    reticulate (== 1.43.0),
+    shiny (== 1.11.1),
+    markdown (== 2.0) 
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
