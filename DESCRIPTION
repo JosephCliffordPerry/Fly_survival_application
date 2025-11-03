@@ -13,9 +13,11 @@ Imports:
     tiff,
     bslib ,
     ggplot2 ,
-    reticulate (== 1.43.0),
+    reticulate,
     shiny ,
     markdown
+Remotes:
+    cran::https://cran.r-project.org/src/contrib/Archive/reticulate/reticulate_1.43.0.tar.gz
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
