@@ -8,7 +8,7 @@ Avi_to_tiff <- function(video_folder, log_fun = NULL) {
     return()
   }
 
-  shiny::withProgress(message = "Converting AVI -> TIFF...", value = 0, {
+  shiny::withProgress(message = "Converting AVI -> TIFF...", value = NA, {
 
     n_files <- length(avi_files)
 

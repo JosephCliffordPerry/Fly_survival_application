@@ -7,19 +7,18 @@
 Load_fly_app()
 }
 \value{
-A Shiny application object. Typically launched with \code{shiny::runApp()} when
-called interactively.
+Launches the Fly Survival Tools Shiny application.
 }
 \description{
 Initializes and launches the Fly data Shiny application.
 }
 \details{
-This function sets up the user interface and server logic for the Fly application,
-including theming, navigation, and reactive behavior.
+This function first launches a small Shiny app that allows the user
+to set or keep the current working directory, then launches the main
+Fly Survival Tools application using that directory.
 }
 \examples{
 \dontrun{
 Load_fly_app()
 }
-
 }
