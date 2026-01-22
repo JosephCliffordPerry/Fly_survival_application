@@ -13,7 +13,7 @@
 #' \dontrun{
 #' Load_fly_app()
 #' }
-Load_fly_app <- function() {
+Load_fly_app <- function(select_wd = TRUE) {
   # ---- Theme ----
   app_theme <- bslib::bs_theme(
     version = 5,
@@ -75,10 +75,16 @@ Load_fly_app <- function() {
   }
 
   # ---- Run WD selector first ----
-  chosen_wd <- shiny::runApp(get_wd_app())
-  setwd(chosen_wd)
-  message("Working directory now set to: ", chosen_wd)
-
+  # ---- Optionally run WD selector first ----
+  if (isTRUE(select_wd)) {
+    chosen_wd <- shiny::runApp(get_wd_app())
+    setwd(chosen_wd)
+    message("Working directory now set to: ", chosen_wd)
+  } else {
+    chosen_wd <- getwd()
+    message("Using existing working directory: ", chosen_wd)
+  }
+  
   # ================================
   # ---- STEP 2: Main Fly App ----
   # ================================
