@@ -38,7 +38,7 @@ inference_panel <- function() {
       shinyFiles::shinyDirChoose(input, "image_dir", roots = roots, session = session)
 
       output$inference_log <- shiny::renderText({
-        "Click 'Run Inference' to start. Progress will be shown above."
+        "Click 'Run Inference' to start. Progress will be shown in a box below."
       })
 
       shiny::observeEvent(input$run_inference, {

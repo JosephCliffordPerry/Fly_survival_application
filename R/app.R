@@ -74,16 +74,27 @@ Load_fly_app <- function(select_wd = TRUE) {
     shiny::shinyApp(wdui, wdserver)
   }
 
-  # ---- Run WD selector first ----
   # ---- Optionally run WD selector first ----
   if (isTRUE(select_wd)) {
     chosen_wd <- shiny::runApp(get_wd_app())
-    setwd(chosen_wd)
-    message("Working directory now set to: ", chosen_wd)
   } else {
     chosen_wd <- getwd()
-    message("Using existing working directory: ", chosen_wd)
   }
+  
+  # ---- Validate result (handles premature close) ----
+  if (!is.character(chosen_wd) ||
+      length(chosen_wd) != 1 ||
+      is.na(chosen_wd) ||
+      !nzchar(chosen_wd) ||
+      !dir.exists(chosen_wd)) {
+    
+    message("WD selector closed or returned invalid path; using existing working directory.")
+    chosen_wd <- getwd()
+  } else {
+    message("Working directory now set to: ", chosen_wd)
+  }
+  
+  setwd(chosen_wd)
   
   # ================================
   # ---- STEP 2: Main Fly App ----
