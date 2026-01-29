@@ -13,7 +13,7 @@
 #' \dontrun{
 #' Load_fly_app()
 #' }
-Load_fly_app <- function() {
+Load_fly_app <- function(select_wd = TRUE) {
   # ---- Theme ----
   app_theme <- bslib::bs_theme(
     version = 5,
@@ -74,11 +74,28 @@ Load_fly_app <- function() {
     shiny::shinyApp(wdui, wdserver)
   }
 
-  # ---- Run WD selector first ----
-  chosen_wd <- shiny::runApp(get_wd_app())
+  # ---- Optionally run WD selector first ----
+  if (isTRUE(select_wd)) {
+    chosen_wd <- shiny::runApp(get_wd_app())
+  } else {
+    chosen_wd <- getwd()
+  }
+  
+  # ---- Validate result (handles premature close) ----
+  if (!is.character(chosen_wd) ||
+      length(chosen_wd) != 1 ||
+      is.na(chosen_wd) ||
+      !nzchar(chosen_wd) ||
+      !dir.exists(chosen_wd)) {
+    
+    message("WD selector closed or returned invalid path; using existing working directory.")
+    chosen_wd <- getwd()
+  } else {
+    message("Working directory now set to: ", chosen_wd)
+  }
+  
   setwd(chosen_wd)
-  message("Working directory now set to: ", chosen_wd)
-
+  
   # ================================
   # ---- STEP 2: Main Fly App ----
   # ================================
