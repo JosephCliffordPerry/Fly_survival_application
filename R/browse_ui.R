@@ -55,24 +55,35 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
 
       #### Run Analysis & propagate ####
       shiny::observeEvent(input$run_analysis, {
+
         inference_stats <- df_analysis()
-        # Ensure we have a data.frame with rows
-        if (is.null(inference_stats) || !is.data.frame(inference_stats) || nrow(inference_stats) == 0) {
-          stop("run_analysis aborted: df_analysis() must be a non-empty data.frame")
-        }
 
-        # Ensure frame_paths available
-        if (is.null(frame_paths()) || length(frame_paths()) == 0) {
-          stop("run_analysis aborted: no frames available (frame_paths() is empty)")
-        }
-
-        # sanity: required coordinate columns exist
-        required_cols <- c("x1","y1","x2","y2","x3","y3","x4","y4","frame")
-        missing_cols <- setdiff(required_cols, names(inference_stats))
-        if (length(missing_cols) > 0) {
-          stop("run_analysis aborted: missing required columns: ", paste(missing_cols, collapse = ", "))
-        }
-        shiny::req(inference_stats, frame_paths())
+        shiny::validate(
+          shiny::need(
+            !is.null(inference_stats) &&
+              is.data.frame(inference_stats) &&
+              nrow(inference_stats) > 0,
+            "Run analysis aborted: df_analysis() must be a non-empty data.frame"
+          ),
+          shiny::need(
+            !is.null(frame_paths()) && length(frame_paths()) > 0,
+            "Run analysis aborted: no frames available"
+          ),
+          shiny::need(
+            {
+              required_cols <- c("x1","y1","x2","y2","x3","y3","x4","y4","frame")
+              missing_cols <- setdiff(required_cols, names(inference_stats))
+              length(missing_cols) == 0
+            },
+            paste(
+              "Run analysis aborted: missing required columns:",
+              paste(setdiff(
+                c("x1","y1","x2","y2","x3","y3","x4","y4","frame"),
+                names(inference_stats)
+              ), collapse = ", ")
+            )
+          )
+        )
 
         New_threshold <- input$iou_threshold
         if (exists("threshold") && exists("New_threshold") && threshold != New_threshold) {
@@ -82,7 +93,8 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
 
         # Determine if analysis file
         is_analysis <- "id" %in% names(inference_stats)
-        if(is_analysis) {
+
+        if (is_analysis) {
           message("File already contains IDs skipping propagation.")
           inference_stats$id <- suppressWarnings(as.numeric(as.character(inference_stats$id)))
 
@@ -91,60 +103,83 @@ browse_panel <- function(df_analysis, frame_paths, stats_file = NULL) {
           keep_ids <- as.integer(names(id_counts[id_counts >= input$min_appearances]))
           inference_stats <- inference_stats[inference_stats$id %in% keep_ids, ]
           df_analysis(inference_stats)
+          return(NULL)
         }
 
-        if(!is_analysis) {
-          if(!"frame_num" %in% names(inference_stats)) {
-            inference_stats$frame_num <- as.integer(sub(".*_(\\d+)\\.tif$", "\\1", inference_stats$frame))
-          }
-          inference_stats$points <- apply(inference_stats[, c("x1","y1","x2","y2","x3","y3","x4","y4")],
-                                          1, function(r) matrix(r, ncol = 2, byrow = TRUE), simplify = FALSE)
-          inference_stats$manual <- inference_stats$manual %||% FALSE
-          inference_stats$id <- NA_integer_
+        if (!"frame_num" %in% names(inference_stats)) {
+          inference_stats$frame_num <- as.integer(
+            sub(".*_(\\d+)\\.tif$", "\\1", inference_stats$frame)
+          )
+        }
 
-          next_id <- 1
-          threshold <- input$iou_threshold
-          n <- nrow(inference_stats)
-          coords_array <- array(NA, dim = c(2, 4, n))
-          for (i in seq_len(n)) {
-            coords_array[1,,i] <- inference_stats$points[[i]][,1]
-            coords_array[2,,i] <- inference_stats$points[[i]][,2]
-          }
-          inference_stats$x_min <- apply(coords_array[1,,], 2, min)
-          inference_stats$x_max <- apply(coords_array[1,,], 2, max)
-          inference_stats$y_min <- apply(coords_array[2,,], 2, min)
-          inference_stats$y_max <- apply(coords_array[2,,], 2, max)
+        inference_stats$points <- apply(
+          inference_stats[, c("x1","y1","x2","y2","x3","y3","x4","y4")],
+          1,
+          function(r) matrix(r, ncol = 2, byrow = TRUE),
+          simplify = FALSE
+        )
 
-          shiny::withProgress(message = "Running analysis & propagating boxes...", value = 0, {
-            for(i in seq_len(n)) {
-              if(is.na(inference_stats$id[i])) {
+        inference_stats$manual <- inference_stats$manual %||% FALSE
+        inference_stats$id <- NA_integer_
+
+        next_id <- 1
+        threshold <- input$iou_threshold
+        n <- nrow(inference_stats)
+
+        coords_array <- array(NA, dim = c(2, 4, n))
+        for (i in seq_len(n)) {
+          coords_array[1,,i] <- inference_stats$points[[i]][,1]
+          coords_array[2,,i] <- inference_stats$points[[i]][,2]
+        }
+
+        inference_stats$x_min <- apply(coords_array[1,,], 2, min)
+        inference_stats$x_max <- apply(coords_array[1,,], 2, max)
+        inference_stats$y_min <- apply(coords_array[2,,], 2, min)
+        inference_stats$y_max <- apply(coords_array[2,,], 2, max)
+
+        shiny::withProgress(
+          message = "Running analysis & propagating boxes...",
+          value = 0,
+          {
+            for (i in seq_len(n)) {
+              if (is.na(inference_stats$id[i])) {
                 inference_stats$id[i] <- next_id
                 poly_i <- inference_stats$points[[i]]
-                if(i < n) {
-                  remaining <- (i+1):n
-                  xi_min <- inference_stats$x_min[i]; xi_max <- inference_stats$x_max[i]
-                  yi_min <- inference_stats$y_min[i]; yi_max <- inference_stats$y_max[i]
-                  x_overlap <- (xi_max >= inference_stats$x_min[remaining]) & (xi_min <= inference_stats$x_max[remaining])
-                  y_overlap <- (yi_max >= inference_stats$y_min[remaining]) & (yi_min <= inference_stats$y_max[remaining])
+
+                if (i < n) {
+                  remaining <- (i + 1):n
+                  xi_min <- inference_stats$x_min[i]
+                  xi_max <- inference_stats$x_max[i]
+                  yi_min <- inference_stats$y_min[i]
+                  yi_max <- inference_stats$y_max[i]
+
+                  x_overlap <- (xi_max >= inference_stats$x_min[remaining]) &
+                    (xi_min <= inference_stats$x_max[remaining])
+                  y_overlap <- (yi_max >= inference_stats$y_min[remaining]) &
+                    (yi_min <= inference_stats$y_max[remaining])
+
                   candidates <- remaining[x_overlap & y_overlap]
-                  for(j in candidates) {
-                    if(is.na(inference_stats$id[j]) && obb_iou(poly_i, inference_stats$points[[j]]) > threshold) {
+
+                  for (j in candidates) {
+                    if (is.na(inference_stats$id[j]) &&
+                        obb_iou(poly_i, inference_stats$points[[j]]) > threshold) {
                       inference_stats$id[j] <- inference_stats$id[i]
                     }
                   }
                 }
                 next_id <- next_id + 1
               }
-              shiny::incProgress(1/n)
+              shiny::incProgress(1 / n)
             }
-          })
+          }
+        )
 
-          id_counts <- table(inference_stats$id)
-          keep_ids <- as.integer(names(id_counts[id_counts >= input$min_appearances]))
-          inference_stats <- inference_stats[inference_stats$id %in% keep_ids, ]
-          df_analysis(inference_stats)
-        }
+        id_counts <- table(inference_stats$id)
+        keep_ids <- as.integer(names(id_counts[id_counts >= input$min_appearances]))
+        inference_stats <- inference_stats[inference_stats$id %in% keep_ids, ]
+        df_analysis(inference_stats)
       })
+
 
       #### df_prop reactive ####
       df_prop <- shiny::reactive({

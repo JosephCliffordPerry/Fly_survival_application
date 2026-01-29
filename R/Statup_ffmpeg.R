@@ -24,6 +24,13 @@ get_ffmpeg_path <- function() {
         python_version = "3.12.4"
       )
 
+      append_msg(output <- capture.output({
+        py_run_string("print('Python setup via reticulate ran')")
+      }))
+
+      output_text <- paste(output, collapse = "\n")
+      print(output_text)
+
       ffmpeg <- reticulate::import("imageio_ffmpeg")
       exe <- ffmpeg$get_ffmpeg_exe()
 

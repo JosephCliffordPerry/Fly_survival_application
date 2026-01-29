@@ -166,6 +166,12 @@ Load_fly_app <- function() {
       frame_paths(files[order(as.numeric(gsub(".*_(\\d+)\\.tif$", "\\1", files)))])
     })
   }
+  tags$script(HTML("
+  Shiny.addCustomMessageHandler('reload', function(message) {
+    location.reload();
+  });
+"))
+
   cat("App loaded\n")
 
   # ---- Launch main app ----

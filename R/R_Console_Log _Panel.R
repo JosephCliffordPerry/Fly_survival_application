@@ -2,6 +2,16 @@ r_console_panel <- function() {
 
   ui <- shiny::tabPanel(
     "R Console Log",
+    shiny::fluidRow(
+      shiny::column(
+        12,
+        shiny::actionButton(
+          "reload_app",
+          "Reload app",
+          icon = shiny::icon("rotate-right")
+        )
+      )
+    ),
     shiny::verbatimTextOutput("r_console_out")
   )
 
@@ -39,13 +49,23 @@ r_console_panel <- function() {
     # Startup message
     cat("App loaded\n")
 
+    # ---- Reload button handler ----
+    shiny::observeEvent(input$reload_app, {
+      session$sendCustomMessage("reload", list())
+    })
+
     # Cleanup on session end
     session$onSessionEnded(function() {
       try(sink(type = "output"), silent = TRUE)
       try(close(out_con), silent = TRUE)
-      # Append temp log to permanent log
+
       if (file.exists(temp_out)) {
-        cat(readLines(temp_out, warn = FALSE), sep = "\n", file = permanent_log, append = TRUE)
+        cat(
+          readLines(temp_out, warn = FALSE),
+          sep = "\n",
+          file = permanent_log,
+          append = TRUE
+        )
       }
       file.remove(temp_out)
     })
